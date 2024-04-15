@@ -63,8 +63,8 @@ class Portfolio:
             color = "light_red"
 
         print(colored("Portfolio totals:", attrs=("underline", "bold", "blink")))
-        print(colored(f"£ {self.total_gbp:,.2f} | {pct_change}%", color))
-        print(colored(f"$ {self.total_gbp * 1/self.usd_gbp:,.2f} | {pct_change}%", color))
+        print(colored(f"£ {self.total_gbp:,.2f} | {'+' + str(pct_change) if pct_change >= 0 else str(pct_change)}%", color))
+        print(colored(f"$ {self.total_gbp * 1/self.usd_gbp:,.2f} | {'+' + str(pct_change) if pct_change >= 0 else str(pct_change)}%", color))
 
 
     def show_forecast(self, years):
