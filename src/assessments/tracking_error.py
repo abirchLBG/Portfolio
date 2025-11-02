@@ -2,13 +2,14 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.dataclasses.assessment import Assessment
+from src.dataclasses.assessment_config import AssessmentConfig
 
 
 @dataclass
-class TrackingError(Assessment):
+class TrackingError:
+    config: AssessmentConfig
+
     def calc(self) -> float:
-        self.value = float(
-                (self.returns - self.bmk_returns).std() * np.sqrt(252)
-        )
+        self.value = float(self.config.active_returns.std() * np.sqrt(252))
+
         return self.value

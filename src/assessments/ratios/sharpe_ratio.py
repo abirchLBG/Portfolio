@@ -2,16 +2,20 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.dataclasses.assessment import Assessment
+from src.dataclasses.assessment_config import AssessmentConfig
 
 
 @dataclass
-class SharpeRatio(Assessment):
+class SharpeRatio:
+    config: AssessmentConfig
+
     def calc(self) -> float:
-        excess_std: float = self.excess_returns.std()
+        excess_std: float = self.config.excess_returns.std()
+
         self.value: float = (
-            float((self.excess_returns).mean() / excess_std * np.sqrt(252))
+            float(((self.config.excess_returns).mean() * np.sqrt(252)) / (excess_std))
             if excess_std > 0
             else np.nan
         )
+
         return self.value

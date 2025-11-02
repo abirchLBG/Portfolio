@@ -2,13 +2,15 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.dataclasses.assessment import Assessment
+from src.dataclasses.assessment_config import AssessmentConfig
 
 
 @dataclass
-class Beta(Assessment):
+class Beta:
+    config: AssessmentConfig
+
     def calc(self) -> float:
-        cov: float = np.cov(self.returns, self.bmk_returns)[0, 1]
-        self.value: float = float(cov / np.var(self.bmk_returns))
+        cov: float = np.cov(self.config.returns, self.config.bmk)[0, 1]
+        self.value: float = float(cov / np.var(self.config.bmk))
 
         return self.value

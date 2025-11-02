@@ -6,10 +6,10 @@ import pandas as pd
 
 
 @dataclass(kw_only=True)
-class Assessment(ABC):
+class AssessmentConfig(ABC):
     returns: pd.Series
     rfr: pd.Series
-    bmk_returns: pd.Series
+    bmk: pd.Series
 
     start: str | pd.Timestamp | date | None = None
     end: str | pd.Timestamp | date | None = None
@@ -24,7 +24,7 @@ class Assessment(ABC):
             self.returns = self.returns[: self.end]
 
         self.rfr = self.rfr.reindex(self.returns.index).fillna(0)
-        self.bmk_returns = self.bmk_returns.reindex(self.returns.index).fillna(0)
+        self.bmk = self.bmk.reindex(self.returns.index).fillna(0)
 
         if self.rfr.isna().any():
             raise ValueError("Risk-free rate has missing data")
@@ -37,3 +37,4 @@ class Assessment(ABC):
 
         # Calculate excess
         self.excess_returns: pd.Series = self.returns - self.rfr
+        self.active_returns: pd.Series = self.returns - self.bmk
