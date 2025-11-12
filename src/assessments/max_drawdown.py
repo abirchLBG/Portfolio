@@ -2,13 +2,11 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from src.dataclasses.assessment_config import AssessmentConfig
+from src.assessments.base_assessment import BaseAssessment
 
 
-@dataclass
-class MaxDrawdown:
-    config: AssessmentConfig
-
+@dataclass(kw_only=True)
+class MaxDrawdown(BaseAssessment):
     def calc(self) -> float:
         cum_returns: pd.Series = self.config.returns.add(1).cumprod()
         running_max: pd.Series = cum_returns.cummax()

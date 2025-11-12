@@ -24,6 +24,15 @@ class SubCol(StrEnum):
 class Subscriptions:
     data: pd.DataFrame
 
+    def __post_init__(self):
+        # Time weighted returns
+        self.cash_flows: pd.Series = (
+            self.data["USD"]
+            .resample("D")
+            .sum()  # in case of multiple deposits per day
+            .fillna(0.0)
+        )
+
     @classmethod
     def from_csv(cls, path: str) -> "Subscriptions":
         df: pd.DataFrame = pd.read_csv(path)
@@ -45,5 +54,6 @@ class Subscriptions:
         df = df.groupby(by=[SubCol.Date, SubCol.Portfolio]).sum()
         df = df.sort_values(by=SubCol.Date)
         df = df.reset_index().set_index(SubCol.Date, drop=True)
+        df = df.resample("D").sum().fillna(0.0)
 
         return cls(data=df)

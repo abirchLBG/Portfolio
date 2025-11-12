@@ -2,13 +2,11 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.dataclasses.assessment_config import AssessmentConfig
+from src.assessments.base_assessment import BaseAssessment
 
 
-@dataclass
-class SharpeRatio:
-    config: AssessmentConfig
-
+@dataclass(kw_only=True)
+class SharpeRatio(BaseAssessment):
     def calc(self) -> float:
         excess_std: float = self.config.excess_returns.std()
 

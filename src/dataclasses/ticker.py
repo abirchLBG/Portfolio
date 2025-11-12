@@ -16,7 +16,9 @@ class Ticker:
         self.ccy: str = str(self.info["currency"])
 
         self.prices: pd.Series = self._get_price_history()
-        self.returns = self.prices.pct_change().dropna(how="any").rename("Returns")
+        self.returns = (
+            self.prices.pct_change(fill_method=None).dropna(how="any").rename("Returns")
+        )
 
     def _get_fast_info(self) -> dict[str, str | int]:
         if hasattr(self, "info"):

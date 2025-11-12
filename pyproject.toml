@@ -11,5 +11,6 @@ dependencies = [
     "pandas>=2.3.3",
     "pytest>=8.4.2",
     "tqdm>=4.67.1",
+    "yahooquery>=2.4.1",
     "yfinance>=0.2.66",
 ]
