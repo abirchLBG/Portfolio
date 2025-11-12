@@ -71,25 +71,6 @@ class Transactions:
         # Format price
         df[TxCol.Price] = df[TxCol.Price].str.removeprefix("£").astype(float)
 
-        # TODO: cash balances not taken into account
-        # # Add Cash ticker to handle cash balance from SELL orders
-        # gbp_usd: pd.Series = Ticker(ticker="GBPUSD=X", is_fx=True).prices
-
-        # sell_tx: pd.DataFrame = df.loc[df[TxCol.Transaction] == "Sale"]
-
-        # sell_tx[TxCol.Transaction] = "Purchase"
-        # sell_tx[TxCol.Description] = "Cash"
-        # sell_tx[TxCol.Ticker] = "USD"
-
-        # # sell_tx[TxCol.Quantity] = sell_tx[TxCol.Price]
-
-        # for i in sell_tx.index:
-        #     tx_date: pd.Timestamp = sell_tx.loc[i, TxCol.Date] # type: ignore
-        #     sell_tx.loc[i, TxCol.Quantity] = sell_tx.loc[i, TxCol.Quantity] * gbp_usd.loc[tx_date] * sell_tx.loc[i, TxCol.Price]
-
-        # sell_tx[TxCol.Price] = 1.0
-        # df = pd.concat([df, sell_tx], axis=0)
-
         df = df.sort_values(by=TxCol.Date).reset_index(drop=True)
 
         return cls(raw_data=df)
@@ -104,5 +85,12 @@ class Transactions:
             )
             .resample("D")
             .sum()
-            .fillna(0)
         )
+
+        self.data = self.data.reindex(
+            pd.DatetimeIndex(
+                pd.date_range(
+                    self.data.index.min(), pd.Timestamp.now().date(), freq="D"
+                )
+            )
+        ).fillna(0)
