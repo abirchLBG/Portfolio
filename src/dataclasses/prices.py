@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.dataclasses.ticker import Ticker
 from src.dataclasses.transactions import Transactions
-from src.utils import DummyExecutor
+from src.utils.executor import DummyExecutor
 
 
 @dataclass

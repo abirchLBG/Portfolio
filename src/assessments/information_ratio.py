@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import numpy as np
+import pandas as pd
 
 from src.assessments.base_assessment import BaseAssessment
 from src.assessments.tracking_error import TrackingError
@@ -8,12 +9,64 @@ from src.assessments.tracking_error import TrackingError
 
 @dataclass(kw_only=True)
 class InformationRatio(BaseAssessment):
-    def calc(self) -> float:
-        tracking_error: float = TrackingError(config=self.config).calc()
-        mean_active: float = self.config.active_returns.mean() * 252
-
-        self.value: float = (
-            float(mean_active / tracking_error) if tracking_error != 0 else np.nan
+    @staticmethod
+    def _summary(returns: pd.Series, bmk: pd.Series, ann_factor: int = 252) -> float:
+        tracking_error: float = TrackingError._summary(
+            returns=returns, bmk=bmk, ann_factor=1
         )
 
-        return self.value
+        return (
+            float(
+                ((returns - bmk).mean() * ann_factor)
+                / (tracking_error * np.sqrt(ann_factor))
+            )
+            if tracking_error != 0
+            else np.nan
+        )
+
+    @staticmethod
+    def _rolling(
+        returns: pd.Series, bmk: pd.Series, window: int = 252, ann_factor: int = 252
+    ) -> pd.Series:
+        rolling_te: pd.Series = TrackingError._rolling(
+            returns=returns, bmk=bmk, window=window, ann_factor=1
+        )
+
+        return ((returns - bmk).rolling(window).mean() * ann_factor) / (
+            rolling_te * np.sqrt(ann_factor)
+        )
+
+    @staticmethod
+    def _expanding(
+        returns: pd.Series, bmk: pd.Series, min_periods: int = 21, ann_factor: int = 252
+    ) -> pd.Series:
+        expanding_te: pd.Series = TrackingError._expanding(
+            returns=returns, bmk=bmk, min_periods=min_periods, ann_factor=1
+        )
+
+        return ((returns - bmk).expanding(min_periods).mean() * ann_factor) / (
+            expanding_te * np.sqrt(ann_factor)
+        )
+
+    def summary(self) -> float:
+        return InformationRatio._summary(
+            returns=self.config.returns,
+            bmk=self.config.bmk,
+            ann_factor=self.config.ann_factor,
+        )
+
+    def rolling(self) -> pd.Series:
+        return InformationRatio._rolling(
+            returns=self.config.returns,
+            bmk=self.config.bmk,
+            window=self.config.window,
+            ann_factor=self.config.ann_factor,
+        )
+
+    def expanding(self) -> pd.Series:
+        return InformationRatio._expanding(
+            returns=self.config.returns,
+            bmk=self.config.bmk,
+            min_periods=self.config.expanding_min_periods,
+            ann_factor=self.config.ann_factor,
+        )
