@@ -31,8 +31,8 @@ class TxCol(StrEnum):
     # Derived
     Ticker = "Ticker"
 
-    @classmethod
-    def raw_cols(cls) -> list["TxCol"]:
+    @staticmethod
+    def raw_cols() -> list["TxCol"]:
         return [
             TxCol.Portfolio,
             TxCol.Date,
@@ -47,8 +47,8 @@ class TxCol(StrEnum):
 class Transactions:
     raw_data: pd.DataFrame
 
-    @classmethod
-    def from_csv(cls, path: str) -> "Transactions":
+    @staticmethod
+    def from_csv(path: str) -> "Transactions":
         df: pd.DataFrame = pd.read_csv(path)
         df.columns = df.columns.str.strip()
         df = df[TxCol.raw_cols()]
@@ -73,7 +73,7 @@ class Transactions:
 
         df = df.sort_values(by=TxCol.Date).reset_index(drop=True)
 
-        return cls(raw_data=df)
+        return Transactions(raw_data=df)
 
     def __post_init__(self) -> None:
         self.data: pd.DataFrame = (

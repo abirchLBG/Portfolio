@@ -15,8 +15,8 @@ class SubCol(StrEnum):
     # Derived
     USD = "USD"
 
-    @classmethod
-    def raw_cols(cls) -> list["SubCol"]:
+    @staticmethod
+    def raw_cols() -> list["SubCol"]:
         return [SubCol.Portfolio, SubCol.Date, SubCol.GBP]
 
 
@@ -33,8 +33,8 @@ class Subscriptions:
             .fillna(0.0)
         )
 
-    @classmethod
-    def from_csv(cls, path: str) -> "Subscriptions":
+    @staticmethod
+    def from_csv(path: str) -> "Subscriptions":
         df: pd.DataFrame = pd.read_csv(path)
 
         df = df[SubCol.raw_cols()]
@@ -56,4 +56,4 @@ class Subscriptions:
         df = df.reset_index().set_index(SubCol.Date, drop=True)
         df = df.resample("D").sum().fillna(0.0)
 
-        return cls(data=df)
+        return Subscriptions(data=df)

@@ -1,17 +1,40 @@
 from dataclasses import dataclass
 
 import pandas as pd
+import numpy as np
 
 from src.assessments.base_assessment import BaseAssessment
 
 
-@dataclass(kw_only=True)
+@dataclass
 class MaxDrawdown(BaseAssessment):
-    def calc(self) -> float:
-        cum_returns: pd.Series = self.config.returns.add(1).cumprod()
-        running_max: pd.Series = cum_returns.cummax()
+    @staticmethod
+    def _summary(returns: pd.Series) -> float:
+        cum_returns: np.ndarray = np.cumprod(returns + 1)
+        running_max: np.ndarray = np.maximum.accumulate(cum_returns)
+        drawdown: np.ndarray = cum_returns / running_max - 1
+        max_dd: float = float(drawdown.min())
 
-        drawdown: pd.Series = cum_returns.div(running_max).sub(1)
-        self.value: float = float(drawdown.min())
+        return max_dd
 
-        return self.value
+    @staticmethod
+    def _rolling(returns: pd.Series, window: int = 252) -> pd.Series:
+        return returns.rolling(window=window).apply(MaxDrawdown._summary, raw=True)
+
+    @staticmethod
+    def _expanding(returns: pd.Series, min_periods: int = 21) -> pd.Series:
+        return returns.expanding(min_periods=min_periods).apply(
+            MaxDrawdown._summary,
+            raw=True,
+        )
+
+    def summary(self) -> float:
+        return self._summary(returns=self.config.returns)
+
+    def rolling(self) -> pd.Series:
+        return self._rolling(returns=self.config.returns, window=self.config.window)
+
+    def expanding(self) -> pd.Series:
+        return self._expanding(
+            returns=self.config.returns, min_periods=self.config.expanding_min_periods
+        )

@@ -3,16 +3,19 @@ from enum import StrEnum
 from typing import Any, Self, Type
 
 from frozendict import frozendict
+import pandas as pd
 from pyparsing import Iterable
 
 from src.assessments.base_assessment import BaseAssessment
 from src.assessments.beta import Beta
 from src.assessments.cagr import CAGR
+from src.assessments.jensens_alpha import JensensAlpha
 from src.assessments.max_drawdown import MaxDrawdown
 from src.assessments.calmar_ratio import CalmarRatio
 from src.assessments.information_ratio import InformationRatio
 from src.assessments.sharpe_ratio import SharpeRatio
 from src.assessments.tracking_error import TrackingError
+from src.assessments.treynor_ratio import TreynorRatio
 from src.dataclasses.assessment_config import AssessmentConfig
 
 
@@ -31,7 +34,8 @@ class AssessmentName(StrEnum):
     SortinoRatio = "Sortino Ratio"
     InformationRatio = "Information Ratio"
     CalmarRatio = "Calmar Ratio"
-    # TreynorRatio = "Treynor Ratio"
+    TreynorRatio = "Treynor Ratio"
+    JensensAlpha = "Jensen's Alpha"
 
 
 ALL_ASSESSMENTS: frozendict[AssessmentName, Type[BaseAssessment]] = frozendict(
@@ -43,6 +47,8 @@ ALL_ASSESSMENTS: frozendict[AssessmentName, Type[BaseAssessment]] = frozendict(
         AssessmentName.SharpeRatio: SharpeRatio,
         AssessmentName.InformationRatio: InformationRatio,
         AssessmentName.CalmarRatio: CalmarRatio,
+        AssessmentName.TreynorRatio: TreynorRatio,
+        AssessmentName.JensensAlpha: JensensAlpha,
     }
 )
 
@@ -53,8 +59,11 @@ class Evaluation:
     assessments: frozendict[AssessmentName, Any] = ALL_ASSESSMENTS
 
     def __post_init__(self):
-        self.results: dict[AssessmentName, float] | None = None
+        self._results: dict[AssessmentName, float] | None = None
         self._timer: dict[AssessmentName, float] = {}
+
+    def __repr__(self) -> str:
+        return "<Evaluation>"
 
     def _init_assessments(self) -> None:
         """Wrapper func to init the assessments."""
@@ -108,7 +117,6 @@ class Evaluation:
         logger.info("-" * 37)
 
         for name, assessment in self._initialized_assessments.items():
-            self._timer[name] = assessment.calc_time
             time_taken: str = f"{assessment.calc_time:.4f}s"
 
             fmt_str = f"{name:{' '}<25}|    {time_taken}"  # 37 chars
@@ -118,9 +126,12 @@ class Evaluation:
 
     def run(self) -> Self:
         self._init_assessments()
-        self.results = {}
+        self._results = {}
 
         for name, assessment in self._initialized_assessments.items():
-            self.results[name] = assessment.calc()
+            self._results[name] = assessment.summary()
+            # self._timer[name] = assessment.calc_time
+
+        self.results: pd.Series = pd.Series(self._results)
 
         return self

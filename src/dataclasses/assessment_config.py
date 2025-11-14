@@ -14,6 +14,10 @@ class AssessmentConfig(ABC):
     start: str | pd.Timestamp | date | None = None
     end: str | pd.Timestamp | date | None = None
 
+    window: int = 252
+    ann_factor: int = 252
+    expanding_min_periods: int = 21  # 1 BMonth
+
     def __post_init__(self):
         if self.start is not None:
             self.start = pd.Timestamp(self.start).date()
@@ -34,7 +38,3 @@ class AssessmentConfig(ABC):
 
         if not self.returns.index.equals(self.rfr.index):
             raise ValueError("Index mismatch between returns and rfr")
-
-        # Calculate excess
-        self.excess_returns: pd.Series = self.returns - self.rfr
-        self.active_returns: pd.Series = self.returns - self.bmk
