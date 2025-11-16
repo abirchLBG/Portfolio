@@ -8,22 +8,13 @@ from src.assessments.beta import Beta
 
 @dataclass(kw_only=True)
 class JensensAlpha(BaseAssessment):
-    # def calc(self) -> float:
-    #     beta: float = Beta(config=self.config).calc()
-
-    #     # based on CAPM model
-    #     # CAPM (R_p) = R_f + Beta * (R_m - R_f)
-    #     # alpha = (Rp - Rf) - beta * (Rm - Rf)
-
-    #     self.value: float = (
-    #         (self.config.returns - self.config.rfr)
-    #         - beta * (self.config.bmk - self.config.rfr)
-    #     ).mean() * 252
-    #     return self.value
-
     @staticmethod
     def _summary(
-        returns: pd.Series, rfr: pd.Series, bmk: pd.Series, ann_factor: int = 252
+        returns: pd.Series,
+        rfr: pd.Series,
+        bmk: pd.Series,
+        ann_factor: int = 252,
+        **kwargs,
     ) -> float:
         beta: float = Beta._summary(returns=returns, bmk=bmk)
 
@@ -36,6 +27,7 @@ class JensensAlpha(BaseAssessment):
         bmk: pd.Series,
         window: int,
         ann_factor: int = 252,
+        **kwargs,
     ) -> pd.Series:
         rolling_beta: pd.Series = Beta._rolling(returns=returns, bmk=bmk, window=window)
 
@@ -50,6 +42,7 @@ class JensensAlpha(BaseAssessment):
         bmk: pd.Series,
         min_periods: int,
         ann_factor: int = 252,
+        **kwargs,
     ) -> pd.Series:
         rolling_beta: pd.Series = Beta._expanding(
             returns=returns, bmk=bmk, min_periods=min_periods
@@ -58,29 +51,3 @@ class JensensAlpha(BaseAssessment):
         return ((returns - rfr) - rolling_beta * (bmk - rfr)).expanding(
             min_periods
         ).mean() * ann_factor
-
-    def summary(self) -> float:
-        return self._summary(
-            returns=self.config.returns,
-            bmk=self.config.bmk,
-            rfr=self.config.rfr,
-            ann_factor=self.config.ann_factor,
-        )
-
-    def rolling(self) -> pd.Series:
-        return self._rolling(
-            returns=self.config.returns,
-            rfr=self.config.rfr,
-            bmk=self.config.bmk,
-            window=self.config.window,
-            ann_factor=self.config.ann_factor,
-        )
-
-    def expanding(self) -> pd.Series:
-        return self._expanding(
-            returns=self.config.returns,
-            rfr=self.config.rfr,
-            bmk=self.config.bmk,
-            min_periods=self.config.expanding_min_periods,
-            ann_factor=self.config.ann_factor,
-        )

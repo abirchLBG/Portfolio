@@ -9,7 +9,7 @@ from src.assessments.base_assessment import BaseAssessment
 @dataclass
 class MaxDrawdown(BaseAssessment):
     @staticmethod
-    def _summary(returns: pd.Series) -> float:
+    def _summary(returns: pd.Series, **kwargs) -> float:
         cum_returns: np.ndarray = np.cumprod(returns + 1)
         running_max: np.ndarray = np.maximum.accumulate(cum_returns)
         drawdown: np.ndarray = cum_returns / running_max - 1
@@ -18,23 +18,12 @@ class MaxDrawdown(BaseAssessment):
         return max_dd
 
     @staticmethod
-    def _rolling(returns: pd.Series, window: int = 252) -> pd.Series:
+    def _rolling(returns: pd.Series, window: int = 252, **kwargs) -> pd.Series:
         return returns.rolling(window=window).apply(MaxDrawdown._summary, raw=True)
 
     @staticmethod
-    def _expanding(returns: pd.Series, min_periods: int = 21) -> pd.Series:
+    def _expanding(returns: pd.Series, min_periods: int = 21, **kwargs) -> pd.Series:
         return returns.expanding(min_periods=min_periods).apply(
             MaxDrawdown._summary,
             raw=True,
-        )
-
-    def summary(self) -> float:
-        return self._summary(returns=self.config.returns)
-
-    def rolling(self) -> pd.Series:
-        return self._rolling(returns=self.config.returns, window=self.config.window)
-
-    def expanding(self) -> pd.Series:
-        return self._expanding(
-            returns=self.config.returns, min_periods=self.config.expanding_min_periods
         )

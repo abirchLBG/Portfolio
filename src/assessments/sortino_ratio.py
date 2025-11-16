@@ -9,7 +9,9 @@ from src.assessments.base_assessment import BaseAssessment
 @dataclass(kw_only=True)
 class SortinoRatio(BaseAssessment):
     @staticmethod
-    def _summary(returns: pd.Series, rfr: pd.Series, ann_factor: int = 252) -> float:
+    def _summary(
+        returns: pd.Series, rfr: pd.Series, ann_factor: int = 252, **kwargs
+    ) -> float:
         excess: pd.Series = returns - rfr
         excess_downside: pd.Series = excess.where(excess < 0, 0.0)
         excess_downside_deviation: float = np.sqrt(np.mean(np.square(excess_downside)))
@@ -22,7 +24,11 @@ class SortinoRatio(BaseAssessment):
 
     @staticmethod
     def _rolling(
-        returns: pd.Series, rfr: pd.Series, window: int = 252, ann_factor: int = 252
+        returns: pd.Series,
+        rfr: pd.Series,
+        window: int = 252,
+        ann_factor: int = 252,
+        **kwargs,
     ) -> pd.Series:
         excess: pd.Series = returns - rfr
         excess_downside: pd.Series = excess.where(excess < 0, 0.0)
@@ -44,6 +50,7 @@ class SortinoRatio(BaseAssessment):
         rfr: pd.Series,
         min_periods: int = 252,
         ann_factor: int = 252,
+        **kwargs,
     ) -> pd.Series:
         excess: pd.Series = returns - rfr
         excess_downside: pd.Series = excess.where(excess < 0, 0.0)
@@ -57,27 +64,4 @@ class SortinoRatio(BaseAssessment):
             rolling_excess_mean
             / rolling_excess_downside_deviation
             * np.sqrt(ann_factor)
-        )
-
-    def summary(self) -> float:
-        return SortinoRatio._summary(
-            returns=self.config.returns,
-            rfr=self.config.rfr,
-            ann_factor=self.config.ann_factor,
-        )
-
-    def rolling(self) -> pd.Series:
-        return SortinoRatio._rolling(
-            returns=self.config.returns,
-            rfr=self.config.rfr,
-            window=self.config.window,
-            ann_factor=self.config.ann_factor,
-        )
-
-    def expanding(self) -> pd.Series:
-        return SortinoRatio._expanding(
-            returns=self.config.returns,
-            rfr=self.config.rfr,
-            min_periods=self.config.expanding_min_periods,
-            ann_factor=self.config.ann_factor,
         )

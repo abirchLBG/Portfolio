@@ -18,13 +18,15 @@ class Beta(BaseAssessment):
     """
 
     @staticmethod
-    def _summary(returns: pd.Series, bmk: pd.Series) -> float:
+    def _summary(returns: pd.Series, bmk: pd.Series, **kwargs) -> float:
         cov: np.ndarray = np.cov(returns, bmk)
 
         return float(cov[0, 1] / cov[1, 1])
 
     @staticmethod
-    def _rolling(returns: pd.Series, bmk: pd.Series, window: int) -> pd.Series:
+    def _rolling(
+        returns: pd.Series, bmk: pd.Series, window: int, **kwargs
+    ) -> pd.Series:
         rolling_cov: pd.Series = returns.rolling(window).cov(bmk)
         rolling_var: pd.Series = bmk.rolling(window).var()
 
@@ -32,24 +34,9 @@ class Beta(BaseAssessment):
 
     @staticmethod
     def _expanding(
-        returns: pd.Series, bmk: pd.Series, min_periods: int = 21
+        returns: pd.Series, bmk: pd.Series, min_periods: int = 21, **kwargs
     ) -> pd.Series:
         expanding_cov: pd.Series = returns.expanding(min_periods).cov(bmk)
         expanding_var: pd.Series = bmk.expanding(min_periods).var()
 
         return expanding_cov / expanding_var
-
-    def summary(self) -> float:
-        return self._summary(returns=self.config.returns, bmk=self.config.bmk)
-
-    def rolling(self) -> pd.Series:
-        return self._rolling(
-            returns=self.config.returns, bmk=self.config.bmk, window=self.config.window
-        )
-
-    def expanding(self) -> pd.Series:
-        return self._expanding(
-            returns=self.config.returns,
-            bmk=self.config.bmk,
-            min_periods=self.config.expanding_min_periods,
-        )

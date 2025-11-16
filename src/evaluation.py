@@ -3,7 +3,6 @@ from enum import StrEnum
 from typing import Any, Self, Type
 
 from frozendict import frozendict
-import pandas as pd
 from pyparsing import Iterable
 
 from src.assessments.base_assessment import BaseAssessment
@@ -20,6 +19,8 @@ from src.dataclasses.assessment_config import AssessmentConfig
 
 
 from logging import Logger, getLogger
+
+from src.dataclasses.assessment_results import AssessmentType
 
 logger: Logger = getLogger(__name__)
 
@@ -52,18 +53,22 @@ ALL_ASSESSMENTS: frozendict[AssessmentName, Type[BaseAssessment]] = frozendict(
     }
 )
 
+ALL_ASSESSMENT_TYPES: frozenset[AssessmentType] = frozenset({v for v in AssessmentType})
+
 
 @dataclass
 class Evaluation:
     config: AssessmentConfig
-    assessments: frozendict[AssessmentName, Any] = ALL_ASSESSMENTS
+
+    _assessments: frozendict[AssessmentName, Type[BaseAssessment]] = ALL_ASSESSMENTS
+    _assessment_types: frozenset[AssessmentType] = ALL_ASSESSMENT_TYPES
 
     def __post_init__(self):
         self._results: dict[AssessmentName, float] | None = None
         self._timer: dict[AssessmentName, float] = {}
 
     def __repr__(self) -> str:
-        return "<Evaluation>"
+        return "Evaluation"
 
     def _init_assessments(self) -> None:
         """Wrapper func to init the assessments."""
@@ -71,13 +76,13 @@ class Evaluation:
         self._initialized_assessments: dict[AssessmentName, Any] = dict(
             map(
                 lambda item: (item[0], item[1](config=self.config)),
-                self.assessments.items(),
+                self._assessments.items(),
             )
         )
 
     def with_assessments(
         self, assessments: Iterable[AssessmentName] | None = None
-    ) -> "Evaluation":
+    ) -> Self:
         """Method to change the Evaluation object to use filtered assessments from AssessmentName enum.
 
         Args:
@@ -86,21 +91,35 @@ class Evaluation:
         Returns:
             Evaluation: Evaluation object with filtered assessments.
         """
+
+        if not assessments:
+            return self
+
+        logger.info("Running with filtered assessments")
+        self._assessments = frozendict(
+            {name: ALL_ASSESSMENTS[name] for name in assessments}
+        )
+
+        return self
+
+    def with_assessment_types(
+        self, assessment_types: Iterable[AssessmentType] | None = None
+    ) -> Self:
+        """Method to change the Evaluation object to use filtered assessment types from AssessmentType enum.
+
+        Args:
+            assessments (set[AssessmentName] | None, optional): Assessments to run the evaluation with. Defaults to None.
+
+        Returns:
+            Evaluation: Evaluation object with filtered assessments.
+        """
+        if not assessment_types:
+            return self
+
         logger.info("Running with filtered assessments")
 
-        if assessments is None:
-            return self
+        self._assessment_types = frozenset(assessment_types)
 
-        assessments = set(assessments)
-        if len(assessments) == 0:
-            self.assessments = ALL_ASSESSMENTS
-            return self
-
-        filtered_assessments: dict[AssessmentName, Type[BaseAssessment]] = {
-            name: ALL_ASSESSMENTS[name] for name in assessments
-        }
-
-        self.assessments = frozendict(filtered_assessments)
         return self
 
     def display_timer_stats(self) -> None:
@@ -128,10 +147,11 @@ class Evaluation:
         self._init_assessments()
         self._results = {}
 
+        print(len(self._initialized_assessments))
         for name, assessment in self._initialized_assessments.items():
-            self._results[name] = assessment.summary()
-            # self._timer[name] = assessment.calc_time
+            for assessment_type in self._assessment_types:
+                assessment.run(assessment_type)
 
-        self.results: pd.Series = pd.Series(self._results)
+            self._results[name] = assessment.results
 
         return self

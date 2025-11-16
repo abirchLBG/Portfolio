@@ -1,5 +1,5 @@
 from abc import ABC
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date
 
 import pandas as pd
@@ -14,9 +14,9 @@ class AssessmentConfig(ABC):
     start: str | pd.Timestamp | date | None = None
     end: str | pd.Timestamp | date | None = None
 
-    window: int = 252
     ann_factor: int = 252
-    expanding_min_periods: int = 21  # 1 BMonth
+    window: int = 252
+    min_periods: int = 21  # 1 BMonth
 
     def __post_init__(self):
         if self.start is not None:
@@ -29,6 +29,8 @@ class AssessmentConfig(ABC):
 
         self.rfr = self.rfr.reindex(self.returns.index).fillna(0)
         self.bmk = self.bmk.reindex(self.returns.index).fillna(0)
+
+        self.kwargs: dict = asdict(self)
 
         if self.rfr.isna().any():
             raise ValueError("Risk-free rate has missing data")

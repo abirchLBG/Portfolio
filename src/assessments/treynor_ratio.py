@@ -11,7 +11,11 @@ from src.assessments.beta import Beta
 class TreynorRatio(BaseAssessment):
     @staticmethod
     def _summary(
-        returns: pd.Series, rfr: pd.Series, bmk: pd.Series, ann_factor: int = 252
+        returns: pd.Series,
+        rfr: pd.Series,
+        bmk: pd.Series,
+        ann_factor: int = 252,
+        **kwargs,
     ) -> float:
         beta: float = Beta._summary(returns=returns, bmk=bmk)
         excess: pd.Series = returns - rfr
@@ -25,6 +29,7 @@ class TreynorRatio(BaseAssessment):
         bmk: pd.Series,
         window: int = 252,
         ann_factor: int = 252,
+        **kwargs,
     ) -> pd.Series:
         rolling_beta: pd.Series = Beta._rolling(returns=returns, bmk=bmk, window=window)
         excess: pd.Series = returns - rfr
@@ -40,6 +45,7 @@ class TreynorRatio(BaseAssessment):
         bmk: pd.Series,
         min_periods: int = 21,
         ann_factor: int = 252,
+        **kwargs,
     ) -> pd.Series:
         expanding_beta: pd.Series = Beta._expanding(
             returns=returns, bmk=bmk, min_periods=min_periods
@@ -49,29 +55,3 @@ class TreynorRatio(BaseAssessment):
         return (
             excess.expanding(min_periods).mean() * ann_factor / expanding_beta
         ).where(expanding_beta != 0, np.nan)
-
-    def summary(self) -> float:
-        return TreynorRatio._summary(
-            returns=self.config.returns,
-            rfr=self.config.rfr,
-            bmk=self.config.bmk,
-            ann_factor=self.config.ann_factor,
-        )
-
-    def rolling(self) -> pd.Series:
-        return TreynorRatio._rolling(
-            returns=self.config.returns,
-            rfr=self.config.rfr,
-            bmk=self.config.bmk,
-            window=self.config.window,
-            ann_factor=self.config.ann_factor,
-        )
-
-    def expanding(self) -> pd.Series:
-        return TreynorRatio._expanding(
-            returns=self.config.returns,
-            rfr=self.config.rfr,
-            bmk=self.config.bmk,
-            min_periods=self.config.expanding_min_periods,
-            ann_factor=self.config.ann_factor,
-        )

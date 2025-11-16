@@ -9,7 +9,9 @@ from src.assessments.base_assessment import BaseAssessment
 @dataclass(kw_only=True)
 class SharpeRatio(BaseAssessment):
     @staticmethod
-    def _summary(returns: pd.Series, rfr: pd.Series, ann_factor: int = 252) -> float:
+    def _summary(
+        returns: pd.Series, rfr: pd.Series, ann_factor: int = 252, **kwargs
+    ) -> float:
         excess: pd.Series = returns - rfr
         excess_std: float = excess.std()
 
@@ -21,7 +23,7 @@ class SharpeRatio(BaseAssessment):
 
     @staticmethod
     def _rolling(
-        returns: pd.Series, rfr: pd.Series, window: int, ann_factor: int = 252
+        returns: pd.Series, rfr: pd.Series, window: int, ann_factor: int = 252, **kwargs
     ) -> pd.Series:
         excess: pd.Series = returns - rfr
 
@@ -34,7 +36,11 @@ class SharpeRatio(BaseAssessment):
 
     @staticmethod
     def _expanding(
-        returns: pd.Series, rfr: pd.Series, min_periods: int = 21, ann_factor: int = 252
+        returns: pd.Series,
+        rfr: pd.Series,
+        min_periods: int = 21,
+        ann_factor: int = 252,
+        **kwargs,
     ) -> pd.Series:
         excess: pd.Series = returns - rfr
 
@@ -43,27 +49,4 @@ class SharpeRatio(BaseAssessment):
             if x.std() > 0
             else np.nan,
             raw=False,
-        )
-
-    def summary(self) -> float:
-        return self._summary(
-            returns=self.config.returns,
-            rfr=self.config.rfr,
-            ann_factor=self.config.ann_factor,
-        )
-
-    def rolling(self) -> pd.Series:
-        return self._rolling(
-            returns=self.config.returns,
-            rfr=self.config.rfr,
-            window=self.config.window,
-            ann_factor=self.config.ann_factor,
-        )
-
-    def expanding(self) -> pd.Series:
-        return self._expanding(
-            returns=self.config.returns,
-            rfr=self.config.rfr,
-            min_periods=self.config.expanding_min_periods,
-            ann_factor=self.config.ann_factor,
         )
