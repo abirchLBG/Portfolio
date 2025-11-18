@@ -4,7 +4,7 @@ from typing import Any, Self, Type
 from concurrent.futures import Executor, ProcessPoolExecutor
 
 import pandas as pd
-from pyparsing import Iterable
+from typing import Iterable
 
 from src.assessments.base_assessment import BaseAssessment
 from src.assessments.beta import Beta
@@ -16,6 +16,12 @@ from src.assessments.information_ratio import InformationRatio
 from src.assessments.sharpe_ratio import SharpeRatio
 from src.assessments.tracking_error import TrackingError
 from src.assessments.treynor_ratio import TreynorRatio
+from src.assessments.volatility import Volatility
+from src.assessments.correlation import Correlation
+from src.assessments.var import ValueAtRisk
+from src.assessments.cvar import CVaR
+from src.assessments.up_capture import UpCapture
+from src.assessments.down_capture import DownCapture
 from src.constants import AssessmentName
 from src.dataclasses.assessment_config import AssessmentConfig
 
@@ -33,6 +39,12 @@ ALL_ASSESSMENTS: dict[AssessmentName, Type[BaseAssessment]] = {
     AssessmentName.CAGR: CAGR,
     AssessmentName.MaxDrawdown: MaxDrawdown,
     AssessmentName.TrackingError: TrackingError,
+    AssessmentName.Volatility: Volatility,
+    AssessmentName.Correlation: Correlation,
+    AssessmentName.ValueAtRisk: ValueAtRisk,
+    AssessmentName.CVaR: CVaR,
+    AssessmentName.UpCapture: UpCapture,
+    AssessmentName.DownCapture: DownCapture,
     AssessmentName.SharpeRatio: SharpeRatio,
     AssessmentName.InformationRatio: InformationRatio,
     AssessmentName.CalmarRatio: CalmarRatio,

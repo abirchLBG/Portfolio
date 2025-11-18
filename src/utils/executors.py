@@ -26,40 +26,8 @@ class DummyExecutor(Executor):
         pass
 
 
-# class RQFuture:
-#     def __init__(self, job_id, connection):
-#         self.job_id = job_id
-#         self.connection = connection
-
-#     def result(self, timeout=None, poll_interval=0.2):
-#         """Block until RQ job finishes and then return the result."""
-#         start = time.time()
-#         job = Job.fetch(self.job_id, connection=self.connection)
-
-#         while job.get_status() not in ("finished", "failed"):
-#             if timeout and (time.time() - start) > timeout:
-#                 raise TimeoutError(f"Job {self.job_id} timed out")
-#             time.sleep(poll_interval)
-#             job.refresh()
-
-#         if job.is_failed:
-#             raise RuntimeError(f"RQ job failed: {job.exc_info}")
-
-#         return job.return_value
-
-
-# class RQExecutor:
-#     def __init__(self, queue, *args, **kwargs):
-#         self.queue = queue
-
-#     def submit(self, func, *args, **kwargs):
-#         """Enqueue job in RQ like a remote executor."""
-#         job = self.queue.enqueue(func, *args, **kwargs)
-#         return RQFuture(job.id, self.queue.connection)
-
-
 class APIFuture(Future):
-    def __init__(self, job_id: str, api_url: str, poll_interval: float = 0.5):
+    def __init__(self, job_id: str, api_url: str, poll_interval: float = 0.05):
         super().__init__()
         self.job_id = job_id
         self.api_url = api_url.rstrip("/")
@@ -73,7 +41,13 @@ class APIFuture(Future):
             data = resp.json()
             status = data.get("status")
             if status == "finished":
-                return data.get("result")
+                result = data.get("result")
+                if result is None:
+                    raise RuntimeError(
+                        f"Job {self.job_id} finished but result is None. "
+                        f"Response data: {data}"
+                    )
+                return result
             elif status == "failed":
                 raise RuntimeError(f"Job {self.job_id} failed")
             if timeout and (time.time() - start) > timeout:
@@ -89,8 +63,9 @@ class RQExecutor(Executor):
     of running tasks locally, it sends them to a remote API for async execution.
     """
 
-    def __init__(self, api_url: str):
+    def __init__(self, api_url: str, poll_interval: float = 0.05):
         self.api_url = api_url.rstrip("/")
+        self.poll_interval = poll_interval
 
     def submit(self, assessment_fn, assessment_type: str) -> APIFuture:
         """
@@ -128,7 +103,7 @@ class RQExecutor(Executor):
         )
         resp.raise_for_status()
         job_id = resp.json()["job_id"]
-        return APIFuture(job_id, self.api_url)
+        return APIFuture(job_id, self.api_url, self.poll_interval)
 
     def shutdown(self, wait=True):
         pass  # Nothing to shutdown for HTTP

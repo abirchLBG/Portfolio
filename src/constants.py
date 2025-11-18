@@ -11,6 +11,12 @@ class AssessmentName(StrEnum):
     CAGR = "CAGR"
     MaxDrawdown = "Max Drawdown"
     TrackingError = "Tracking Error"
+    Volatility = "Volatility"
+    Correlation = "Correlation"
+    ValueAtRisk = "Value at Risk"
+    CVaR = "CVaR"
+    UpCapture = "Up Capture"
+    DownCapture = "Down Capture"
 
     SharpeRatio = "Sharpe Ratio"
     SortinoRatio = "Sortino Ratio"
