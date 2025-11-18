@@ -16,8 +16,14 @@ class CalmarRatio(BaseAssessment):
 
     @staticmethod
     def _summary(returns: pd.Series, ann_factor: int = 252, **kwargs) -> float:
+        import numpy as np
+
         cagr: float = CAGR._summary(returns=returns, ann_factor=ann_factor)
         max_dd: float = MaxDrawdown._summary(returns=returns)
+
+        if abs(max_dd) == 0:
+            # No drawdown - return inf if positive CAGR, -inf if negative
+            return float(np.inf) if cagr > 0 else float(-np.inf)
 
         return cagr / abs(max_dd)
 

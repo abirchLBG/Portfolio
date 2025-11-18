@@ -26,10 +26,7 @@ class OmegaRatio(BaseAssessment):
     def _summary(
         returns: pd.Series, threshold: float = 0.0, ann_factor: int = 252, **kwargs
     ) -> float:
-        # Annualize threshold if needed
-        threshold_daily = threshold / ann_factor if ann_factor > 1 else threshold
-
-        excess = returns - threshold_daily
+        excess = returns - threshold
         gains = excess[excess > 0].sum()
         losses = -excess[excess < 0].sum()
 
@@ -43,10 +40,8 @@ class OmegaRatio(BaseAssessment):
         ann_factor: int = 252,
         **kwargs,
     ) -> pd.Series:
-        threshold_daily = threshold / ann_factor if ann_factor > 1 else threshold
-
         def calc_omega(x):
-            excess = x - threshold_daily
+            excess = x - threshold
             gains = excess[excess > 0].sum()
             losses = -excess[excess < 0].sum()
             return float(gains / losses) if losses > 0 else np.inf
@@ -61,10 +56,8 @@ class OmegaRatio(BaseAssessment):
         ann_factor: int = 252,
         **kwargs,
     ) -> pd.Series:
-        threshold_daily = threshold / ann_factor if ann_factor > 1 else threshold
-
         def calc_omega(x):
-            excess = x - threshold_daily
+            excess = x - threshold
             gains = excess[excess > 0].sum()
             losses = -excess[excess < 0].sum()
             return float(gains / losses) if losses > 0 else np.inf

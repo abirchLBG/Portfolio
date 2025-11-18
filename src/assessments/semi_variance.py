@@ -26,10 +26,8 @@ class SemiVariance(BaseAssessment):
     def _summary(
         returns: pd.Series, target: float = 0.0, ann_factor: int = 252, **kwargs
     ) -> float:
-        # Adjust target to daily if annualized
-        target_daily = target / ann_factor if ann_factor > 1 else target
-
-        downside = returns - target_daily
+        # Calculate deviations below target
+        downside = returns - target
         downside[downside > 0] = 0
 
         # Annualize the semi-variance
@@ -43,10 +41,8 @@ class SemiVariance(BaseAssessment):
         ann_factor: int = 252,
         **kwargs,
     ) -> pd.Series:
-        target_daily = target / ann_factor if ann_factor > 1 else target
-
         def calc_semi_var(x):
-            downside = x - target_daily
+            downside = x - target
             downside = downside[downside < 0]
             return float(downside.var() * ann_factor) if len(downside) > 0 else np.nan
 
@@ -60,10 +56,8 @@ class SemiVariance(BaseAssessment):
         ann_factor: int = 252,
         **kwargs,
     ) -> pd.Series:
-        target_daily = target / ann_factor if ann_factor > 1 else target
-
         def calc_semi_var(x):
-            downside = x - target_daily
+            downside = x - target
             downside = downside[downside < 0]
             return float(downside.var() * ann_factor) if len(downside) > 0 else np.nan
 

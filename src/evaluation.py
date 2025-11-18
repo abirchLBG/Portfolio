@@ -30,7 +30,6 @@ from src.assessments.semi_variance import SemiVariance
 from src.assessments.r_squared import RSquared
 from src.assessments.m2_ratio import M2Ratio
 from src.assessments.mean_return import MeanReturn
-from src.assessments.annualized_returns import AnnualizedReturns
 from src.assessments.cumulative_returns import CumulativeReturns
 from src.assessments.ulcer_index import UlcerIndex
 from src.constants import AssessmentName
@@ -70,7 +69,6 @@ ALL_ASSESSMENTS: dict[AssessmentName, Type[BaseAssessment]] = {
     AssessmentName.RSquared: RSquared,
     AssessmentName.UlcerIndex: UlcerIndex,
     AssessmentName.MeanReturn: MeanReturn,
-    AssessmentName.AnnualizedReturns: AnnualizedReturns,
     AssessmentName.CumulativeReturns: CumulativeReturns,
 }
 

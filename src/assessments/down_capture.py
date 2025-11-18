@@ -12,13 +12,13 @@ class DownCapture(BaseAssessment):
     """Down Capture Ratio Assessment
 
     Formula:
-        Down_Capture = (Mean(R_p | R_bmk < 0) / Mean(R_bmk | R_bmk < 0)) * 100
+        Down_Capture = Mean(R_p | R_bmk < 0) / Mean(R_bmk | R_bmk < 0)
 
     Description:
         Measures portfolio performance during periods when the benchmark is negative.
-        Expressed as a percentage. 100% means the portfolio captures all downside.
-        < 100% means the portfolio outperforms (loses less) in down markets.
-        > 100% means the portfolio underperforms (loses more) in down markets.
+        Expressed as a ratio. 1.0 means the portfolio captures all downside.
+        < 1.0 means the portfolio outperforms (loses less) in down markets.
+        > 1.0 means the portfolio underperforms (loses more) in down markets.
     """
 
     name: ClassVar[AssessmentName] = AssessmentName.DownCapture
@@ -36,7 +36,7 @@ class DownCapture(BaseAssessment):
         if benchmark_down == 0:
             return float("nan")
 
-        return float((portfolio_down / benchmark_down) * 100)
+        return float(portfolio_down / benchmark_down)
 
     @staticmethod
     def _rolling(
@@ -63,7 +63,7 @@ class DownCapture(BaseAssessment):
             if bmk_mean == 0 or pd.isna(bmk_mean):
                 return float("nan")
 
-            return (port_mean / bmk_mean) * 100
+            return port_mean / bmk_mean
 
         # Apply calculation using index position
         result = pd.Series(
@@ -96,7 +96,7 @@ class DownCapture(BaseAssessment):
             if bmk_mean == 0 or pd.isna(bmk_mean):
                 return float("nan")
 
-            return (port_mean / bmk_mean) * 100
+            return port_mean / bmk_mean
 
         # Apply calculation using index position
         result = pd.Series(

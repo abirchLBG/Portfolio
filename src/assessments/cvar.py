@@ -12,12 +12,13 @@ class CVaR(BaseAssessment):
     """Conditional Value at Risk (CVaR / Expected Shortfall) Assessment
 
     Formula:
-        CVaR_α = -E[R_p | R_p <= -VaR_α]
+        CVaR_α = E[R_p | R_p <= VaR_α]
 
     Description:
         Expected loss given that the loss exceeds VaR.
         Also known as Expected Shortfall (ES) or Average Value at Risk (AVaR).
         Measures tail risk beyond VaR threshold.
+        Expressed as a negative number representing the expected loss.
         For example, 95% CVaR is the average of all losses worse than the 95% VaR.
     """
 
@@ -28,7 +29,7 @@ class CVaR(BaseAssessment):
         """Calculate CVaR using historical simulation method."""
         var_threshold = returns.quantile(1 - confidence_level)
         # Average of all returns at or below the VaR threshold
-        return float(-returns[returns <= var_threshold].mean())
+        return float(returns[returns <= var_threshold].mean())
 
     @staticmethod
     def _rolling(
@@ -42,7 +43,7 @@ class CVaR(BaseAssessment):
                 return float("nan")
             threshold = x.quantile(1 - confidence_level)
             tail_losses = x[x <= threshold]
-            return -tail_losses.mean() if len(tail_losses) > 0 else float("nan")
+            return tail_losses.mean() if len(tail_losses) > 0 else float("nan")
 
         # Using pandas built-in rolling with apply is already optimized
         # The apply function runs on Series objects which use vectorized operations internally
@@ -63,7 +64,7 @@ class CVaR(BaseAssessment):
                 return float("nan")
             threshold = x.quantile(1 - confidence_level)
             tail_losses = x[x <= threshold]
-            return -tail_losses.mean() if len(tail_losses) > 0 else float("nan")
+            return tail_losses.mean() if len(tail_losses) > 0 else float("nan")
 
         # Using pandas built-in expanding with apply is already optimized
         return returns.expanding(min_periods).apply(cvar_calc, raw=False)

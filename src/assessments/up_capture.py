@@ -12,13 +12,13 @@ class UpCapture(BaseAssessment):
     """Up Capture Ratio Assessment
 
     Formula:
-        Up_Capture = (Mean(R_p | R_bmk > 0) / Mean(R_bmk | R_bmk > 0)) * 100
+        Up_Capture = Mean(R_p | R_bmk > 0) / Mean(R_bmk | R_bmk > 0)
 
     Description:
         Measures portfolio performance during periods when the benchmark is positive.
-        Expressed as a percentage. 100% means the portfolio captures all upside.
-        > 100% means the portfolio outperforms in up markets.
-        < 100% means the portfolio underperforms in up markets.
+        Expressed as a ratio. 1.0 means the portfolio captures all upside.
+        > 1.0 means the portfolio outperforms in up markets.
+        < 1.0 means the portfolio underperforms in up markets.
     """
 
     name: ClassVar[AssessmentName] = AssessmentName.UpCapture
@@ -36,7 +36,7 @@ class UpCapture(BaseAssessment):
         if benchmark_up == 0:
             return float("nan")
 
-        return float((portfolio_up / benchmark_up) * 100)
+        return float(portfolio_up / benchmark_up)
 
     @staticmethod
     def _rolling(
@@ -63,7 +63,7 @@ class UpCapture(BaseAssessment):
             if bmk_mean == 0 or pd.isna(bmk_mean):
                 return float("nan")
 
-            return (port_mean / bmk_mean) * 100
+            return port_mean / bmk_mean
 
         # Apply calculation using index position
         result = pd.Series(
@@ -96,7 +96,7 @@ class UpCapture(BaseAssessment):
             if bmk_mean == 0 or pd.isna(bmk_mean):
                 return float("nan")
 
-            return (port_mean / bmk_mean) * 100
+            return port_mean / bmk_mean
 
         # Apply calculation using index position
         result = pd.Series(

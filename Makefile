@@ -16,6 +16,14 @@ ruff_format_check:
 	@uvx ruff format
 	@uvx ruff check --fix
 
+test:
+	@echo "Running tests"
+	@uv run pytest -n=auto .
+
+build:
+	@echo "Building"
+	@docker compose build
+
 run:
 	@echo "Deploying k8s"
 	@docker compose build

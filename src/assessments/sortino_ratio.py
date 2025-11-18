@@ -14,27 +14,45 @@ class SortinoRatio(BaseAssessment):
 
     @staticmethod
     def _summary(
-        returns: pd.Series, rfr: pd.Series, ann_factor: int = 252, **kwargs
+        returns: pd.Series,
+        target: float = 0.0,
+        ann_factor: int = 252,
+        rfr: pd.Series | None = None,
+        **kwargs,
     ) -> float:
-        excess: pd.Series = returns - rfr
+        # Use rfr if provided, otherwise use target
+        if rfr is not None:
+            excess: pd.Series = returns - rfr
+        else:
+            excess: pd.Series = returns - target
+
         excess_downside: pd.Series = excess.where(excess < 0, 0.0)
         excess_downside_deviation: float = np.sqrt(np.mean(np.square(excess_downside)))
 
-        return (
-            float(excess.mean() / excess_downside_deviation * np.sqrt(ann_factor))
-            if excess_downside_deviation > 0
-            else np.nan
-        )
+        if excess_downside_deviation > 0:
+            return float(
+                excess.mean() / excess_downside_deviation * np.sqrt(ann_factor)
+            )
+        else:
+            # No downside risk - return inf if positive excess, -inf if negative
+            mean_excess = excess.mean()
+            return float(np.inf) if mean_excess > 0 else float(-np.inf)
 
     @staticmethod
     def _rolling(
         returns: pd.Series,
-        rfr: pd.Series,
         window: int = 252,
+        target: float = 0.0,
         ann_factor: int = 252,
+        rfr: pd.Series | None = None,
         **kwargs,
     ) -> pd.Series:
-        excess: pd.Series = returns - rfr
+        # Use rfr if provided, otherwise use target
+        if rfr is not None:
+            excess: pd.Series = returns - rfr
+        else:
+            excess: pd.Series = returns - target
+
         excess_downside: pd.Series = excess.where(excess < 0, 0.0)
 
         rolling_excess_mean: pd.Series = excess.rolling(window).mean()
@@ -51,12 +69,18 @@ class SortinoRatio(BaseAssessment):
     @staticmethod
     def _expanding(
         returns: pd.Series,
-        rfr: pd.Series,
         min_periods: int = 252,
+        target: float = 0.0,
         ann_factor: int = 252,
+        rfr: pd.Series | None = None,
         **kwargs,
     ) -> pd.Series:
-        excess: pd.Series = returns - rfr
+        # Use rfr if provided, otherwise use target
+        if rfr is not None:
+            excess: pd.Series = returns - rfr
+        else:
+            excess: pd.Series = returns - target
+
         excess_downside: pd.Series = excess.where(excess < 0, 0.0)
 
         rolling_excess_mean: pd.Series = excess.expanding(min_periods).mean()

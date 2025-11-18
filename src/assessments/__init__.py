@@ -1,4 +1,3 @@
-from src.assessments.annualized_returns import AnnualizedReturns
 from src.assessments.base_assessment import BaseAssessment
 from src.assessments.beta import Beta
 from src.assessments.cagr import CAGR
@@ -51,7 +50,6 @@ __all__ = [
     "RSquared",
     "M2Ratio",
     "MeanReturn",
-    "AnnualizedReturns",
     "CumulativeReturns",
     "UlcerIndex",
 ]
