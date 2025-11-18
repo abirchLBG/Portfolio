@@ -2,7 +2,7 @@ from src.assessments.base_assessment import BaseAssessment
 from src.assessments.beta import Beta
 from src.assessments.cagr import CAGR
 from src.assessments.calmar_ratio import CalmarRatio
-from src.assessments.correlation import Correlation
+from src.assessments.benchmark_correlation import BenchmarkCorrelation
 from src.assessments.cumulative_returns import CumulativeReturns
 from src.assessments.cvar import CVaR
 from src.assessments.down_capture import DownCapture
@@ -30,7 +30,7 @@ __all__ = [
     "Beta",
     "CAGR",
     "CalmarRatio",
-    "Correlation",
+    "BenchmarkCorrelation",
     "CVaR",
     "DownCapture",
     "InformationRatio",

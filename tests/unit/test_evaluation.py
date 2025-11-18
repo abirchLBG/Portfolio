@@ -21,9 +21,9 @@ from src.utils.executors import DummyExecutor, RQExecutor
 def sample_config():
     """Create sample assessment config."""
     # Create data with at least min_periods (21) observations
-    returns = pd.Series([0.01 + i * 0.001 for i in range(30)])
-    bmk = pd.Series([0.005 + i * 0.0005 for i in range(30)])
-    rfr = pd.Series([0.001] * 30)
+    returns = pd.Series([0.01 + i * 0.001 for i in range(30)], name="TestReturns")
+    bmk = pd.Series([0.005 + i * 0.0005 for i in range(30)], name="TestBmk")
+    rfr = pd.Series([0.001] * 30, name="TestRFR")
 
     return AssessmentConfig(
         returns=returns,
@@ -64,7 +64,10 @@ class TestEvaluation:
     def test_repr(self, sample_config):
         """Test Evaluation __repr__."""
         eval_obj = Evaluation(config=sample_config)
-        assert repr(eval_obj) == "Evaluation"
+        repr_str = repr(eval_obj)
+        assert "Evaluation(" in repr_str
+        assert "assessments=" in repr_str
+        assert "configurations=" in repr_str
 
     def test_with_assessments_filter(self, sample_config):
         """Test filtering assessments."""
@@ -145,18 +148,6 @@ class TestEvaluation:
         assert result is eval_obj
         assert eval_obj._executor is executor
 
-    def test_init_assessments(self, sample_config):
-        """Test assessment initialization."""
-        eval_obj = Evaluation(config=sample_config)
-        eval_obj._init_assessments()
-
-        assert hasattr(eval_obj, "_initialized_assessments")
-        assert len(eval_obj._initialized_assessments) == len(ALL_ASSESSMENTS)
-
-        # Check that all assessments are initialized with config
-        for name, assessment in eval_obj._initialized_assessments.items():
-            assert assessment.config == sample_config
-
     def test_run_with_dummy_executor(self, sample_config):
         """Test run with DummyExecutor."""
         eval_obj = (
@@ -167,13 +158,20 @@ class TestEvaluation:
 
         results = eval_obj.run()
 
-        assert AssessmentName.Beta in results.results
-        assert AssessmentType.Summary in results.results[AssessmentName.Beta]
-        assert isinstance(
-            results.results[AssessmentName.Beta][AssessmentType.Summary], float
+        # Results are now nested under config_key
+        assert len(results.results) == 1  # One config
+        config_key = list(results.results.keys())[0]
+        assert AssessmentName.Beta in results.results[config_key]
+        assert (
+            AssessmentType.Summary in results.results[config_key][AssessmentName.Beta]
         )
-        assert AssessmentName.Beta in results.timer
-        assert AssessmentType.Summary in results.timer[AssessmentName.Beta]
+        assert isinstance(
+            results.results[config_key][AssessmentName.Beta][AssessmentType.Summary],
+            float,
+        )
+        assert config_key in results.timer
+        assert AssessmentName.Beta in results.timer[config_key]
+        assert AssessmentType.Summary in results.timer[config_key][AssessmentName.Beta]
 
     def test_run_with_process_pool_executor(self, sample_config):
         """Test run with ProcessPoolExecutor."""
@@ -187,9 +185,13 @@ class TestEvaluation:
 
         results = eval_obj.run()
 
-        assert AssessmentName.Beta in results.results
-        assert AssessmentName.SharpeRatio in results.results
-        assert AssessmentType.Summary in results.results[AssessmentName.Beta]
+        # Results are now nested under config_key
+        config_key = list(results.results.keys())[0]
+        assert AssessmentName.Beta in results.results[config_key]
+        assert AssessmentName.SharpeRatio in results.results[config_key]
+        assert (
+            AssessmentType.Summary in results.results[config_key][AssessmentName.Beta]
+        )
         executor.shutdown()
 
     def test_run_with_rolling_and_expanding(self, sample_config):
@@ -202,14 +204,22 @@ class TestEvaluation:
 
         results = eval_obj.run()
 
-        assert AssessmentName.Beta in results.results
-        assert AssessmentType.Rolling in results.results[AssessmentName.Beta]
-        assert AssessmentType.Expanding in results.results[AssessmentName.Beta]
-        assert isinstance(
-            results.results[AssessmentName.Beta][AssessmentType.Rolling], pd.Series
+        # Results are now nested under config_key
+        config_key = list(results.results.keys())[0]
+        assert AssessmentName.Beta in results.results[config_key]
+        assert (
+            AssessmentType.Rolling in results.results[config_key][AssessmentName.Beta]
+        )
+        assert (
+            AssessmentType.Expanding in results.results[config_key][AssessmentName.Beta]
         )
         assert isinstance(
-            results.results[AssessmentName.Beta][AssessmentType.Expanding], pd.Series
+            results.results[config_key][AssessmentName.Beta][AssessmentType.Rolling],
+            pd.Series,
+        )
+        assert isinstance(
+            results.results[config_key][AssessmentName.Beta][AssessmentType.Expanding],
+            pd.Series,
         )
 
     def test_run_multiple_assessments(self, sample_config):
@@ -223,10 +233,12 @@ class TestEvaluation:
 
         results = eval_obj.run()
 
+        # Results are now nested under config_key
+        config_key = list(results.results.keys())[0]
         for assessment in assessments:
-            assert assessment in results.results
+            assert assessment in results.results[config_key]
             for assessment_type in eval_obj._assessment_types:
-                assert assessment_type in results.results[assessment]
+                assert assessment_type in results.results[config_key][assessment]
 
     def test_run_all_assessment_types(self, sample_config):
         """Test run with all assessment types."""
@@ -236,9 +248,11 @@ class TestEvaluation:
 
         results = eval_obj.run()
 
-        assert AssessmentName.Beta in results.results
+        # Results are now nested under config_key
+        config_key = list(results.results.keys())[0]
+        assert AssessmentName.Beta in results.results[config_key]
         for assessment_type in AssessmentType:
-            assert assessment_type in results.results[AssessmentName.Beta]
+            assert assessment_type in results.results[config_key][AssessmentName.Beta]
 
     @patch("src.utils.executors.requests.post")
     def test_run_with_rq_executor(self, mock_post, sample_config):
@@ -269,7 +283,9 @@ class TestEvaluation:
 
             results = eval_obj.run()
 
-            assert AssessmentName.Beta in results.results
+            # Results are now nested under config_key
+            config_key = list(results.results.keys())[0]
+            assert AssessmentName.Beta in results.results[config_key]
             assert mock_post.called
 
     def test_fluent_interface(self, sample_config):
@@ -297,12 +313,17 @@ class TestEvaluation:
 
         results = eval_obj.run()
 
-        assert AssessmentName.Beta in results.timer
-        assert AssessmentType.Summary in results.timer[AssessmentName.Beta]
+        # Timer is now nested under config_key
+        config_key = list(results.timer.keys())[0]
+        assert AssessmentName.Beta in results.timer[config_key]
+        assert AssessmentType.Summary in results.timer[config_key][AssessmentName.Beta]
         assert isinstance(
-            results.timer[AssessmentName.Beta][AssessmentType.Summary], float
+            results.timer[config_key][AssessmentName.Beta][AssessmentType.Summary],
+            float,
         )
-        assert results.timer[AssessmentName.Beta][AssessmentType.Summary] > 0
+        assert (
+            results.timer[config_key][AssessmentName.Beta][AssessmentType.Summary] > 0
+        )
 
 
 class TestAllAssessments:

@@ -161,9 +161,11 @@ class TestRQExecutor:
 
         # Create assessment with enough data points (need at least min_periods)
         config = AssessmentConfig(
-            returns=pd.Series([0.01 + i * 0.001 for i in range(25)]),
-            bmk=pd.Series([0.005 + i * 0.0005 for i in range(25)]),
-            rfr=pd.Series([0.001] * 25),
+            returns=pd.Series(
+                [0.01 + i * 0.001 for i in range(25)], name="TestReturns"
+            ),
+            bmk=pd.Series([0.005 + i * 0.0005 for i in range(25)], name="TestBmk"),
+            rfr=pd.Series([0.001] * 25, name="TestRFR"),
             min_periods=2,
         )
         assessment = Beta(config=config)
@@ -200,9 +202,11 @@ class TestRQExecutor:
 
         # Create config with numpy arrays
         config = AssessmentConfig(
-            returns=pd.Series([0.01 + i * 0.001 for i in range(25)]),
-            bmk=pd.Series([0.005 + i * 0.0005 for i in range(25)]),
-            rfr=pd.Series([0.001] * 25),
+            returns=pd.Series(
+                [0.01 + i * 0.001 for i in range(25)], name="TestReturns"
+            ),
+            bmk=pd.Series([0.005 + i * 0.0005 for i in range(25)], name="TestBmk"),
+            rfr=pd.Series([0.001] * 25, name="TestRFR"),
             min_periods=2,
             ann_factor=252,
         )

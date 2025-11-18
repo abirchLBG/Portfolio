@@ -20,7 +20,7 @@ class AssessmentName(StrEnum):
     MaxDrawdown = "Max Drawdown"
     TrackingError = "Tracking Error"
     Volatility = "Volatility"
-    Correlation = "Correlation"
+    BenchmarkCorrelation = "Benchmark Correlation"
     VaR = "VaR"
     CVaR = "CVaR"
     UpCapture = "Up Capture"

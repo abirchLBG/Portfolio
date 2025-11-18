@@ -29,12 +29,18 @@ def run_assessment(
     """
     # Convert lists back to pandas Series
     config_dict = config_dict.copy()
+
+    # Extract optional series names
+    returns_name = config_dict.pop("returns_name", None)
+    bmk_name = config_dict.pop("bmk_name", None)
+    rfr_name = config_dict.pop("rfr_name", None)
+
     if "returns" in config_dict and isinstance(config_dict["returns"], list):
-        config_dict["returns"] = pd.Series(config_dict["returns"])
+        config_dict["returns"] = pd.Series(config_dict["returns"], name=returns_name)
     if "bmk" in config_dict and isinstance(config_dict["bmk"], list):
-        config_dict["bmk"] = pd.Series(config_dict["bmk"])
+        config_dict["bmk"] = pd.Series(config_dict["bmk"], name=bmk_name)
     if "rfr" in config_dict and isinstance(config_dict["rfr"], list):
-        config_dict["rfr"] = pd.Series(config_dict["rfr"])
+        config_dict["rfr"] = pd.Series(config_dict["rfr"], name=rfr_name)
 
     # Get the assessment class from the registry
     try:

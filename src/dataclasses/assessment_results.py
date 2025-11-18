@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.figure import Figure
 
+from src.dataclasses.assessment_config import AssessmentConfig
+
 if TYPE_CHECKING:
     from src.constants import AssessmentName
 
@@ -23,91 +25,272 @@ class EvaluationResults:
     Container for all evaluation results with visualization capabilities.
 
     Attributes:
-        results: Nested dict mapping AssessmentName -> AssessmentType -> result value
-        timer: Nested dict mapping AssessmentName -> AssessmentType -> elapsed time
+        results: Nested dict mapping config_key -> AssessmentName -> AssessmentType -> result value
+        timer: Nested dict mapping config_key -> AssessmentName -> AssessmentType -> elapsed time
+        config: The AssessmentConfig used to generate these results
+        results_dfs: Dict mapping AssessmentType -> DataFrame with multi-level columns
     """
 
-    results: dict["AssessmentName | str", dict[AssessmentType, float | pd.Series]] = (
-        field(default_factory=dict)
-    )
-    timer: dict["AssessmentName | str", dict[AssessmentType, float]] = field(
+    results: dict[
+        str, dict["AssessmentName | str", dict[AssessmentType, float | pd.Series]]
+    ] = field(default_factory=dict)
+    timer: dict[str, dict["AssessmentName | str", dict[AssessmentType, float]]] = field(
         default_factory=dict
     )
+    config: AssessmentConfig | None = None
+    results_dfs: dict[AssessmentType, pd.DataFrame] = field(
+        default_factory=dict, init=False
+    )
+
+    def __post_init__(self) -> None:
+        """Build results_dfs automatically after initialization."""
+        self.build_results_dfs()
+
+    def build_results_dfs(self) -> None:
+        """
+        Build structured DataFrames organized by assessment type with multi-level columns.
+
+        For Summary: Index is assessments, columns are (Portfolio, RFR, Benchmark)
+        For Rolling/Expanding: Index is dates, columns are (Portfolio, RFR, Benchmark, Assessment)
+        """
+        # Build Summary DataFrame
+        summary_data = {}
+        for config_key, config_results in self.results.items():
+            # Parse config key: "portfolio|rfr|bmk"
+            parts = config_key.split("|")
+            if len(parts) != 3:
+                continue
+
+            portfolio, rfr, bmk = parts
+
+            for assessment, types in config_results.items():
+                if AssessmentType.Summary in types:
+                    if assessment not in summary_data:
+                        summary_data[assessment] = {}
+                    summary_data[assessment][(portfolio, rfr, bmk)] = types[
+                        AssessmentType.Summary
+                    ]
+
+        if summary_data:
+            summary_df = pd.DataFrame(summary_data).T
+            summary_df.columns = pd.MultiIndex.from_tuples(
+                summary_df.columns, names=["Portfolio", "RFR", "Benchmark"]
+            )
+            self.results_dfs[AssessmentType.Summary] = summary_df
+
+        # Build Rolling DataFrame
+        rolling_data = {}
+        for config_key, config_results in self.results.items():
+            parts = config_key.split("|")
+            if len(parts) != 3:
+                continue
+
+            portfolio, rfr, bmk = parts
+
+            for assessment, types in config_results.items():
+                if AssessmentType.Rolling in types:
+                    col_key = (portfolio, rfr, bmk, str(assessment))
+                    rolling_data[col_key] = types[AssessmentType.Rolling]
+
+        if rolling_data:
+            rolling_df = pd.DataFrame(rolling_data)
+            rolling_df.columns = pd.MultiIndex.from_tuples(
+                rolling_df.columns,
+                names=["Portfolio", "RFR", "Benchmark", "Assessment"],
+            )
+            self.results_dfs[AssessmentType.Rolling] = rolling_df
+
+        # Build Expanding DataFrame
+        expanding_data = {}
+        for config_key, config_results in self.results.items():
+            parts = config_key.split("|")
+            if len(parts) != 3:
+                continue
+
+            portfolio, rfr, bmk = parts
+
+            for assessment, types in config_results.items():
+                if AssessmentType.Expanding in types:
+                    col_key = (portfolio, rfr, bmk, str(assessment))
+                    expanding_data[col_key] = types[AssessmentType.Expanding]
+
+        if expanding_data:
+            expanding_df = pd.DataFrame(expanding_data)
+            expanding_df.columns = pd.MultiIndex.from_tuples(
+                expanding_df.columns,
+                names=["Portfolio", "RFR", "Benchmark", "Assessment"],
+            )
+            self.results_dfs[AssessmentType.Expanding] = expanding_df
 
     def get_summary_results(self) -> pd.DataFrame:
         """
-        Extract all summary statistics into a DataFrame.
+        Extract all summary statistics into a DataFrame with multilevel columns.
 
         Returns:
-            DataFrame with assessments as index and summary values
+            DataFrame with assessments as index and config combinations as columns
         """
         summary_data = {}
-        for assessment, types in self.results.items():
-            if AssessmentType.Summary in types:
-                summary_data[str(assessment)] = types[AssessmentType.Summary]
+        for config_key, config_results in self.results.items():
+            for assessment, types in config_results.items():
+                if AssessmentType.Summary in types:
+                    if assessment not in summary_data:
+                        summary_data[assessment] = {}
+                    summary_data[assessment][config_key] = types[AssessmentType.Summary]
 
-        return pd.DataFrame.from_dict(summary_data, orient="index", columns=["Value"])
+        # Convert to DataFrame
+        df = pd.DataFrame(summary_data).T
+
+        # Parse config keys into multilevel columns if multiple configs
+        if len(df.columns) > 1 and "|" in str(df.columns[0]):
+            # Split config keys into (returns, rfr, bmk)
+            new_cols = []
+            for col in df.columns:
+                parts = col.split("|")
+                if len(parts) == 3:
+                    new_cols.append(tuple(parts))
+                else:
+                    new_cols.append(col)
+
+            if all(isinstance(c, tuple) for c in new_cols):
+                df.columns = pd.MultiIndex.from_tuples(
+                    new_cols, names=["Returns", "RFR", "Benchmark"]
+                )
+
+        return df
 
     def get_rolling_results(self) -> pd.DataFrame:
         """
-        Extract all rolling statistics into a DataFrame.
+        Extract all rolling statistics into a DataFrame with multilevel columns.
 
         Returns:
-            DataFrame with datetime index and assessments as columns
+            DataFrame with datetime index and multilevel columns (config, assessment)
         """
         rolling_data = {}
-        for assessment, types in self.results.items():
-            if AssessmentType.Rolling in types:
-                rolling_data[str(assessment)] = types[AssessmentType.Rolling]
+        for config_key, config_results in self.results.items():
+            for assessment, types in config_results.items():
+                if AssessmentType.Rolling in types:
+                    # Create multilevel column key
+                    col_key = (config_key, str(assessment))
+                    rolling_data[col_key] = types[AssessmentType.Rolling]
 
-        return pd.DataFrame(rolling_data)
+        df = pd.DataFrame(rolling_data)
+
+        # Create multilevel columns
+        if df.columns.size > 0 and isinstance(df.columns[0], tuple):
+            # Parse config keys if they contain pipe separators
+            new_cols = []
+            for config_key, assessment in df.columns:
+                parts = config_key.split("|")
+                if len(parts) == 3:
+                    new_cols.append((*parts, assessment))
+                else:
+                    new_cols.append((config_key, assessment))
+
+            if all(len(c) == 4 for c in new_cols):
+                df.columns = pd.MultiIndex.from_tuples(
+                    new_cols, names=["Returns", "RFR", "Benchmark", "Assessment"]
+                )
+            else:
+                df.columns = pd.MultiIndex.from_tuples(
+                    df.columns, names=["Config", "Assessment"]
+                )
+
+        return df
 
     def get_expanding_results(self) -> pd.DataFrame:
         """
-        Extract all expanding statistics into a DataFrame.
+        Extract all expanding statistics into a DataFrame with multilevel columns.
 
         Returns:
-            DataFrame with datetime index and assessments as columns
+            DataFrame with datetime index and multilevel columns (config, assessment)
         """
         expanding_data = {}
-        for assessment, types in self.results.items():
-            if AssessmentType.Expanding in types:
-                expanding_data[str(assessment)] = types[AssessmentType.Expanding]
+        for config_key, config_results in self.results.items():
+            for assessment, types in config_results.items():
+                if AssessmentType.Expanding in types:
+                    # Create multilevel column key
+                    col_key = (config_key, str(assessment))
+                    expanding_data[col_key] = types[AssessmentType.Expanding]
 
-        return pd.DataFrame(expanding_data)
+        df = pd.DataFrame(expanding_data)
+
+        # Create multilevel columns
+        if df.columns.size > 0 and isinstance(df.columns[0], tuple):
+            # Parse config keys if they contain pipe separators
+            new_cols = []
+            for config_key, assessment in df.columns:
+                parts = config_key.split("|")
+                if len(parts) == 3:
+                    new_cols.append((*parts, assessment))
+                else:
+                    new_cols.append((config_key, assessment))
+
+            if all(len(c) == 4 for c in new_cols):
+                df.columns = pd.MultiIndex.from_tuples(
+                    new_cols, names=["Returns", "RFR", "Benchmark", "Assessment"]
+                )
+            else:
+                df.columns = pd.MultiIndex.from_tuples(
+                    df.columns, names=["Config", "Assessment"]
+                )
+
+        return df
 
     def get_result(
-        self, assessment: "AssessmentName | str", assessment_type: AssessmentType
-    ) -> float | pd.Series | None:
+        self,
+        assessment: "AssessmentName | str",
+        assessment_type: AssessmentType,
+        config_key: str | None = None,
+    ) -> float | pd.Series | dict | None:
         """
         Get a specific result by assessment and type.
 
         Args:
             assessment: The assessment name
             assessment_type: The type of assessment (summary, rolling, expanding)
+            config_key: Optional config key to get result for specific config.
+                       If None, returns dict of all configs.
 
         Returns:
-            The result value or None if not found
+            The result value, dict of results, or None if not found
         """
-        return self.results.get(assessment, {}).get(assessment_type)
+        if config_key is not None:
+            return (
+                self.results.get(config_key, {})
+                .get(assessment, {})
+                .get(assessment_type)
+            )
+
+        # Return all configs for this assessment/type
+        results = {}
+        for cfg_key, config_results in self.results.items():
+            if (
+                assessment in config_results
+                and assessment_type in config_results[assessment]
+            ):
+                results[cfg_key] = config_results[assessment][assessment_type]
+
+        return results if results else None
 
     def timer_dataframe(self) -> pd.DataFrame:
         """
         Returns a DataFrame with timing stats.
 
         Returns:
-            DataFrame with columns: Assessment, Type, Time (s)
+            DataFrame with columns: Config, Assessment, Type, Time (s)
         """
         rows = []
-        for assessment, types in self.timer.items():
-            for assessment_type, elapsed in types.items():
-                rows.append(
-                    {
-                        "Assessment": str(assessment),
-                        "Type": assessment_type,
-                        "Time (s)": elapsed,
-                    }
-                )
+        for config_key, config_timer in self.timer.items():
+            for assessment, types in config_timer.items():
+                for assessment_type, elapsed in types.items():
+                    rows.append(
+                        {
+                            "Config": config_key,
+                            "Assessment": str(assessment),
+                            "Type": assessment_type,
+                            "Time (s)": elapsed,
+                        }
+                    )
         return pd.DataFrame(rows)
 
     def timer_report(self, max_bar_width: int = 50) -> str:
@@ -123,11 +306,14 @@ class EvaluationResults:
         if not self.timer:
             return "No timing data available. Run evaluation first."
 
-        # Calculate total time per assessment
+        # Calculate total time per assessment across all configs
         assessment_totals = {}
-        for assessment, types in self.timer.items():
-            assessment_name = str(assessment)
-            assessment_totals[assessment_name] = sum(types.values())
+        for config_key, config_timer in self.timer.items():
+            for assessment, types in config_timer.items():
+                assessment_name = str(assessment)
+                if assessment_name not in assessment_totals:
+                    assessment_totals[assessment_name] = 0
+                assessment_totals[assessment_name] += sum(types.values())
 
         # Sort by total time (descending)
         sorted_assessments = sorted(
@@ -165,9 +351,12 @@ class EvaluationResults:
         lines.append("SUMMARY STATISTICS")
         lines.append("-" * n_chars)
 
-        # Count assessments and types
+        # Count assessments, types, and configs
         num_assessments = len(assessment_totals)
-        num_assessment_types = sum(len(types) for types in self.timer.values())
+        num_configs = len(self.timer)
+        num_assessment_types = 0
+        for config_timer in self.timer.values():
+            num_assessment_types += sum(len(types) for types in config_timer.values())
 
         # Calculate stats
         times = list(assessment_totals.values())
@@ -176,6 +365,7 @@ class EvaluationResults:
         max_time = max(times)
 
         lines.append(f"Total Base Assessments | {num_assessments}")
+        lines.append(f"    Total Configurations | {num_configs}")
         lines.append(f" Total Assessment Runs | {num_assessment_types}")
         lines.append(f"            Total Time | {total_time:.3f}s")
         lines.append(f"             Mean Time | {mean_time:.3f}s")
@@ -188,14 +378,15 @@ class EvaluationResults:
 
         # Show breakdown by assessment type if we have multiple types
         type_totals = {}
-        for assessment, types in self.timer.items():
-            for assessment_type, elapsed in types.items():
-                type_name = (
-                    assessment_type.value
-                    if hasattr(assessment_type, "value")
-                    else str(assessment_type)
-                )
-                type_totals[type_name] = type_totals.get(type_name, 0) + elapsed
+        for config_timer in self.timer.values():
+            for assessment, types in config_timer.items():
+                for assessment_type, elapsed in types.items():
+                    type_name = (
+                        assessment_type.value
+                        if hasattr(assessment_type, "value")
+                        else str(assessment_type)
+                    )
+                    type_totals[type_name] = type_totals.get(type_name, 0) + elapsed
 
         if len(type_totals) > 1:
             lines.append("")
@@ -334,7 +525,7 @@ class EvaluationResults:
         return_fig: bool = False,
     ) -> Figure | None:
         """
-        Create a heatmap visualization of results.
+        Create a heatmap visualization of results across configs and assessments.
 
         Args:
             assessment_type: Which type of results to visualize
@@ -347,17 +538,20 @@ class EvaluationResults:
         """
         # Collect data for the specified type
         data = {}
-        for assessment, types in self.results.items():
-            if assessment_type in types:
-                value = types[assessment_type]
-                if isinstance(value, (int, float)):
-                    data[str(assessment)] = value
+        for config_key, config_results in self.results.items():
+            for assessment, types in config_results.items():
+                if assessment_type in types:
+                    value = types[assessment_type]
+                    if isinstance(value, (int, float)):
+                        if assessment not in data:
+                            data[assessment] = {}
+                        data[assessment][config_key] = value
 
         if not data:
             raise ValueError(f"No {assessment_type} results available to plot")
 
-        # Convert to DataFrame for heatmap
-        df = pd.DataFrame.from_dict(data, orient="index", columns=["Value"])
+        # Convert to DataFrame for heatmap (assessments x configs)
+        df = pd.DataFrame(data).T
 
         fig, ax = plt.subplots(figsize=figsize)
         sns.heatmap(
@@ -375,6 +569,7 @@ class EvaluationResults:
     def plot_comparison(
         self,
         assessment: "AssessmentName | str",
+        config_key: str | None = None,
         figsize: tuple[int, int] = (14, 6),
         title: str | None = None,
         return_fig: bool = False,
@@ -384,16 +579,28 @@ class EvaluationResults:
 
         Args:
             assessment: The assessment to compare
+            config_key: Optional config key. If None, uses first config.
             figsize: Figure size as (width, height)
             title: Plot title (auto-generated if None)
 
         Returns:
             matplotlib Figure object
         """
-        if assessment not in self.results:
-            raise ValueError(f"Assessment '{assessment}' not found in results")
+        # Get config key
+        if config_key is None:
+            if not self.results:
+                raise ValueError("No results available")
+            config_key = list(self.results.keys())[0]
 
-        assessment_results = self.results[assessment]
+        if config_key not in self.results:
+            raise ValueError(f"Config '{config_key}' not found in results")
+
+        if assessment not in self.results[config_key]:
+            raise ValueError(
+                f"Assessment '{assessment}' not found in config '{config_key}'"
+            )
+
+        assessment_results = self.results[config_key][assessment]
 
         # Determine which types are available
         has_summary = AssessmentType.Summary in assessment_results
@@ -490,6 +697,23 @@ class EvaluationResults:
             return fig
 
     def __repr__(self) -> str:
-        num_assessments = len(self.results)
-        num_types = sum(len(types) for types in self.results.values())
-        return f"EvaluationResults(assessments={num_assessments}, total_results={num_types})"
+        num_configs = len(self.results)
+        num_assessments = 0
+        num_results = 0
+
+        for config_results in self.results.values():
+            num_assessments = max(num_assessments, len(config_results))
+            num_results += sum(len(types) for types in config_results.values())
+
+        lines = [
+            "EvaluationResults(",
+            f"  configurations={num_configs}",
+            f"  unique_assessments={num_assessments}",
+            f"  total_results={num_results}",
+        ]
+
+        if self.config:
+            lines.append(f"  overlap_mode={self.config.overlap_mode.value}")
+
+        lines.append(")")
+        return "\n".join(lines)

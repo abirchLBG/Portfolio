@@ -8,8 +8,8 @@ from src.constants import AssessmentName
 
 
 @dataclass(kw_only=True)
-class Correlation(BaseAssessment):
-    """Correlation Assessment
+class BenchmarkCorrelation(BaseAssessment):
+    """Benchmark correlation Assessment
 
     Formula:
         Corr(R_p, R_bmk) = Cov(R_p, R_bmk) / (StdDev(R_p) * StdDev(R_bmk))
@@ -20,7 +20,7 @@ class Correlation(BaseAssessment):
         Range: -1 (perfect negative) to +1 (perfect positive)
     """
 
-    name: ClassVar[AssessmentName] = AssessmentName.Correlation
+    name: ClassVar[AssessmentName] = AssessmentName.BenchmarkCorrelation
 
     @staticmethod
     def _summary(returns: pd.Series, bmk: pd.Series, **kwargs) -> float:

@@ -1,9 +1,9 @@
-"""Tests for Correlation assessment."""
+"""Tests for BenchmarkCorrelation assessment."""
 
 import numpy as np
 import pandas as pd
 
-from src.assessments.correlation import Correlation
+from src.assessments.benchmark_correlation import BenchmarkCorrelation
 
 
 def test_correlation_perfect_positive():
@@ -14,9 +14,9 @@ def test_correlation_perfect_positive():
     returns = pd.Series([0.02, 0.04, 0.08])
     bmk = pd.Series([0.01, 0.02, 0.04])
 
-    result = Correlation._summary(returns=returns, bmk=bmk)
+    result = BenchmarkCorrelation._summary(returns=returns, bmk=bmk)
 
-    # Correlation should be 1.0
+    # BenchmarkCorrelation should be 1.0
     assert np.isclose(result, 1.0, rtol=0.01)
 
 
@@ -27,9 +27,9 @@ def test_correlation_perfect_negative():
     returns = pd.Series([0.04, 0.03, 0.01])
     bmk = pd.Series([0.01, 0.02, 0.04])
 
-    result = Correlation._summary(returns=returns, bmk=bmk)
+    result = BenchmarkCorrelation._summary(returns=returns, bmk=bmk)
 
-    # Correlation should be -1.0
+    # BenchmarkCorrelation should be -1.0
     assert np.isclose(result, -1.0, rtol=0.01)
 
 
@@ -39,9 +39,9 @@ def test_correlation_zero():
     returns = pd.Series([0.02, 0.02, 0.02])
     bmk = pd.Series([0.01, 0.02, 0.03])
 
-    result = Correlation._summary(returns=returns, bmk=bmk)
+    result = BenchmarkCorrelation._summary(returns=returns, bmk=bmk)
 
-    # Correlation should be 0 or NaN (no variation in returns)
+    # BenchmarkCorrelation should be 0 or NaN (no variation in returns)
     assert np.isnan(result) or np.isclose(result, 0, atol=0.1)
 
 
@@ -51,7 +51,7 @@ def test_correlation_partial():
     returns = pd.Series([0.01, 0.02, 0.04])
     bmk = pd.Series([0.01, 0.03, 0.02])
 
-    result = Correlation._summary(returns=returns, bmk=bmk)
+    result = BenchmarkCorrelation._summary(returns=returns, bmk=bmk)
 
     # Should be between -1 and 1
     assert -1 <= result <= 1

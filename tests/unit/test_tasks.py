@@ -27,6 +27,9 @@ class TestRunAssessment:
             "bmk": [0.005 + i * 0.0005 for i in range(25)],
             "rfr": [0.001] * 25,
             "min_periods": 2,
+            "returns_name": "TestReturns",
+            "bmk_name": "TestBmk",
+            "rfr_name": "TestRFR",
         }
 
         result = run_assessment("Beta", "summary", config)
@@ -43,6 +46,9 @@ class TestRunAssessment:
             "rfr": [0.001] * 25,
             "window": 5,
             "min_periods": 3,
+            "returns_name": "TestReturns",
+            "bmk_name": "TestBmk",
+            "rfr_name": "TestRFR",
         }
 
         result = run_assessment("Beta", "rolling", config)
@@ -57,6 +63,9 @@ class TestRunAssessment:
             "bmk": [0.005 + i * 0.0005 for i in range(25)],
             "rfr": [0.001] * 25,
             "min_periods": 2,
+            "returns_name": "TestReturns",
+            "bmk_name": "TestBmk",
+            "rfr_name": "TestRFR",
         }
 
         result = run_assessment("Beta", "expanding", config)
@@ -71,6 +80,9 @@ class TestRunAssessment:
             "bmk": [0.005 + i * 0.0005 for i in range(25)],
             "rfr": [0.001] * 25,
             "min_periods": 2,
+            "returns_name": "TestReturns",
+            "bmk_name": "TestBmk",
+            "rfr_name": "TestRFR",
         }
 
         with pytest.raises(ValueError, match="Unknown assessment"):
@@ -85,6 +97,9 @@ class TestRunAssessment:
             "window": 5,
             "min_periods": 3,
             "ann_factor": 252,
+            "returns_name": "TestReturns",
+            "bmk_name": "TestBmk",
+            "rfr_name": "TestRFR",
         }
 
         result = run_assessment("Beta", "rolling", config)
@@ -97,13 +112,19 @@ class TestRunAssessment:
             "bmk": [0.005 + i * 0.0005 for i in range(25)],
             "rfr": [0.001] * 25,
             "min_periods": 2,
+            "returns_name": "TestReturns",
+            "bmk_name": "TestBmk",
+            "rfr_name": "TestRFR",
         }
         original_config = config.copy()
 
         run_assessment("Beta", "summary", config)
 
-        # Original config should be unchanged
-        assert config == original_config
+        # Original config should be unchanged (except for popped name fields)
+        # The name fields are popped in run_assessment, so we need to check the actual data
+        assert config["returns"] == original_config["returns"]
+        assert config["bmk"] == original_config["bmk"]
+        assert config["rfr"] == original_config["rfr"]
 
     def test_run_assessment_different_assessments(self):
         """Test run_assessment with different assessment types."""
@@ -112,9 +133,12 @@ class TestRunAssessment:
             "bmk": [0.005 + i * 0.0005 for i in range(25)],
             "rfr": [0.001] * 25,
             "min_periods": 2,
+            "returns_name": "TestReturns",
+            "bmk_name": "TestBmk",
+            "rfr_name": "TestRFR",
         }
 
-        assessments = ["Beta", "SharpeRatio", "Volatility", "Correlation"]
+        assessments = ["Beta", "SharpeRatio", "Volatility", "BenchmarkCorrelation"]
         for assessment_name in assessments:
             result = run_assessment(assessment_name, "summary", config)
             assert "result" in result

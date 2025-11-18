@@ -17,9 +17,13 @@ class TickerDataError(Exception):
 class Ticker:
     ticker: str
     is_fx: bool = False
+    name: str | None = None  # Optional custom name for returns series
     _max_fx_depth: int = 5  # Prevent infinite recursion in FX conversion
 
     def __post_init__(self) -> None:
+        # Use custom name if provided, otherwise use ticker symbol
+        if self.name is None:
+            self.name = self.ticker
         try:
             self.yf_ticker = yf.Ticker(self.ticker)
         except Exception as e:
@@ -36,7 +40,7 @@ class Ticker:
             raise TickerDataError(f"No price data available for {self.ticker}")
 
         self.returns = (
-            self.prices.pct_change(fill_method=None).dropna(how="any").rename("Returns")
+            self.prices.pct_change(fill_method=None).dropna(how="any").rename(self.name)
         )
 
     def _get_fast_info(self) -> dict[str, str | int]:

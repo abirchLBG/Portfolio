@@ -18,7 +18,7 @@ from src.assessments.sortino_ratio import SortinoRatio
 from src.assessments.tracking_error import TrackingError
 from src.assessments.treynor_ratio import TreynorRatio
 from src.assessments.volatility import Volatility
-from src.assessments.correlation import Correlation
+from src.assessments.benchmark_correlation import BenchmarkCorrelation
 from src.assessments.var import VaR
 from src.assessments.cvar import CVaR
 from src.assessments.up_capture import UpCapture
@@ -50,7 +50,7 @@ ALL_ASSESSMENTS: dict[AssessmentName, Type[BaseAssessment]] = {
     AssessmentName.MaxDrawdown: MaxDrawdown,
     AssessmentName.TrackingError: TrackingError,
     AssessmentName.Volatility: Volatility,
-    AssessmentName.Correlation: Correlation,
+    AssessmentName.BenchmarkCorrelation: BenchmarkCorrelation,
     AssessmentName.VaR: VaR,
     AssessmentName.CVaR: CVaR,
     AssessmentName.UpCapture: UpCapture,
@@ -97,7 +97,25 @@ class Evaluation:
         )
 
     def __repr__(self) -> str:
-        return "Evaluation"
+        num_assessments = len(self._assessments)
+        num_assessment_types = len(self._assessment_types)
+        num_configs = (
+            len(self.config._returns_list)
+            * len(self.config._rfr_list)
+            * len(self.config._bmk_list)
+        )
+        executor_type = self._executor.__class__.__name__
+
+        lines = [
+            "Evaluation(",
+            f"  assessments={num_assessments}",
+            f"  assessment_types={num_assessment_types}",
+            f"  configurations={num_configs}",
+            f"  executor={executor_type}",
+            f"  overlap_mode={self.config.overlap_mode.value}",
+            ")",
+        ]
+        return "\n".join(lines)
 
     def _init_assessments(self) -> None:
         """Wrapper func to init the assessments."""
@@ -160,30 +178,56 @@ class Evaluation:
         """
         Run all configured assessments and return results.
 
+        For configs with multiple returns/rfr/bmk, this will run all combinations
+        and organize results in a multilevel structure.
+
         Returns:
             EvaluationResults: Object containing all assessment results and timing data
         """
-        self._init_assessments()
         results: dict[
-            AssessmentName | str, dict[AssessmentType, float | pd.Series]
+            str, dict[AssessmentName | str, dict[AssessmentType, float | pd.Series]]
         ] = {}
-        timer: dict[AssessmentName | str, dict[AssessmentType, float]] = {}
+        timer: dict[str, dict[AssessmentName | str, dict[AssessmentType, float]]] = {}
 
-        futures = {}
-        for name, assessment in self._initialized_assessments.items():
-            for assessment_type in self._assessment_types:
-                if issubclass(type(self._executor), Executor):
-                    future = self._executor.submit(assessment._run, assessment_type)
-                    futures[future] = (name, assessment_type)
-                else:
-                    output = assessment._run(assessment_type)
-                    results.setdefault(name, {})[assessment_type] = output["result"]
-                    timer.setdefault(name, {})[assessment_type] = output["time"]
+        # Iterate over all config combinations
+        for config_key, single_config in self.config.iter_configs():
+            logger.info(f"Running assessments for configuration: {config_key}")
 
-        # Collect results from futures
-        for future, (name, assessment_type) in futures.items():
-            output = future.result()
-            results.setdefault(name, {})[assessment_type] = output["result"]
-            timer.setdefault(name, {})[assessment_type] = output["time"]
+            # Initialize assessments for this specific config
+            initialized_assessments: dict[AssessmentName, Any] = dict(
+                map(
+                    lambda item: (item[0], item[1](config=single_config)),
+                    self._assessments.items(),
+                )
+            )
 
-        return EvaluationResults(results=results, timer=timer)
+            config_results: dict[
+                AssessmentName | str, dict[AssessmentType, float | pd.Series]
+            ] = {}
+            config_timer: dict[AssessmentName | str, dict[AssessmentType, float]] = {}
+
+            futures = {}
+            for name, assessment in initialized_assessments.items():
+                for assessment_type in self._assessment_types:
+                    if issubclass(type(self._executor), Executor):
+                        future = self._executor.submit(assessment._run, assessment_type)
+                        futures[future] = (name, assessment_type)
+                    else:
+                        output = assessment._run(assessment_type)
+                        config_results.setdefault(name, {})[assessment_type] = output[
+                            "result"
+                        ]
+                        config_timer.setdefault(name, {})[assessment_type] = output[
+                            "time"
+                        ]
+
+            # Collect results from futures
+            for future, (name, assessment_type) in futures.items():
+                output = future.result()
+                config_results.setdefault(name, {})[assessment_type] = output["result"]
+                config_timer.setdefault(name, {})[assessment_type] = output["time"]
+
+            results[config_key] = config_results
+            timer[config_key] = config_timer
+
+        return EvaluationResults(results=results, timer=timer, config=self.config)
