@@ -14,14 +14,25 @@ from src.assessments.max_drawdown import MaxDrawdown
 from src.assessments.calmar_ratio import CalmarRatio
 from src.assessments.information_ratio import InformationRatio
 from src.assessments.sharpe_ratio import SharpeRatio
+from src.assessments.sortino_ratio import SortinoRatio
 from src.assessments.tracking_error import TrackingError
 from src.assessments.treynor_ratio import TreynorRatio
 from src.assessments.volatility import Volatility
 from src.assessments.correlation import Correlation
-from src.assessments.var import ValueAtRisk
+from src.assessments.var import VaR
 from src.assessments.cvar import CVaR
 from src.assessments.up_capture import UpCapture
 from src.assessments.down_capture import DownCapture
+from src.assessments.omega_ratio import OmegaRatio
+from src.assessments.skewness import Skewness
+from src.assessments.kurtosis import Kurtosis
+from src.assessments.semi_variance import SemiVariance
+from src.assessments.r_squared import RSquared
+from src.assessments.m2_ratio import M2Ratio
+from src.assessments.mean_return import MeanReturn
+from src.assessments.annualized_returns import AnnualizedReturns
+from src.assessments.cumulative_returns import CumulativeReturns
+from src.assessments.ulcer_index import UlcerIndex
 from src.constants import AssessmentName
 from src.dataclasses.assessment_config import AssessmentConfig
 
@@ -41,15 +52,26 @@ ALL_ASSESSMENTS: dict[AssessmentName, Type[BaseAssessment]] = {
     AssessmentName.TrackingError: TrackingError,
     AssessmentName.Volatility: Volatility,
     AssessmentName.Correlation: Correlation,
-    AssessmentName.ValueAtRisk: ValueAtRisk,
+    AssessmentName.VaR: VaR,
     AssessmentName.CVaR: CVaR,
     AssessmentName.UpCapture: UpCapture,
     AssessmentName.DownCapture: DownCapture,
     AssessmentName.SharpeRatio: SharpeRatio,
+    AssessmentName.SortinoRatio: SortinoRatio,
     AssessmentName.InformationRatio: InformationRatio,
     AssessmentName.CalmarRatio: CalmarRatio,
     AssessmentName.TreynorRatio: TreynorRatio,
     AssessmentName.JensensAlpha: JensensAlpha,
+    AssessmentName.OmegaRatio: OmegaRatio,
+    AssessmentName.M2Ratio: M2Ratio,
+    AssessmentName.Skewness: Skewness,
+    AssessmentName.Kurtosis: Kurtosis,
+    AssessmentName.SemiVariance: SemiVariance,
+    AssessmentName.RSquared: RSquared,
+    AssessmentName.UlcerIndex: UlcerIndex,
+    AssessmentName.MeanReturn: MeanReturn,
+    AssessmentName.AnnualizedReturns: AnnualizedReturns,
+    AssessmentName.CumulativeReturns: CumulativeReturns,
 }
 
 

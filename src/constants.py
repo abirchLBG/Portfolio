@@ -13,7 +13,7 @@ class AssessmentName(StrEnum):
     TrackingError = "Tracking Error"
     Volatility = "Volatility"
     Correlation = "Correlation"
-    ValueAtRisk = "VaR"
+    VaR = "VaR"
     CVaR = "CVaR"
     UpCapture = "Up Capture"
     DownCapture = "Down Capture"
@@ -24,3 +24,17 @@ class AssessmentName(StrEnum):
     CalmarRatio = "Calmar Ratio"
     TreynorRatio = "Treynor Ratio"
     JensensAlpha = "Jensen's Alpha"
+    OmegaRatio = "Omega Ratio"
+    M2Ratio = "M2 Ratio"
+
+    # Statistical Measures
+    Skewness = "Skewness"
+    Kurtosis = "Kurtosis"
+    SemiVariance = "Semi-Variance"
+    RSquared = "R-Squared"
+    UlcerIndex = "Ulcer Index"
+
+    # Return Metrics
+    MeanReturn = "Mean Return"
+    AnnualizedReturns = "Annualized Returns"
+    CumulativeReturns = "Cumulative Returns"

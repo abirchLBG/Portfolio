@@ -8,7 +8,7 @@ from src.constants import AssessmentName
 
 
 @dataclass(kw_only=True)
-class ValueAtRisk(BaseAssessment):
+class VaR(BaseAssessment):
     """Value at Risk (VaR) Assessment
 
     Formula:
