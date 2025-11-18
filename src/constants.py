@@ -2,8 +2,16 @@ from enum import StrEnum
 
 
 class YfTickers(StrEnum):
-    US_3mo = "^IRX"
+    # ccy
     GBPUSD = "GBPUSD=X"
+
+    # rfr
+    US_3mo = "^IRX"
+    US_10yr = "^TNX"
+
+    # bmk
+    SPX = "^SPX"
+    QQQ = "QQQ"
 
 
 class AssessmentName(StrEnum):

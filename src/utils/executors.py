@@ -63,7 +63,7 @@ class RQExecutor(Executor):
     of running tasks locally, it sends them to a remote API for async execution.
     """
 
-    def __init__(self, api_url: str, poll_interval: float = 0.05):
+    def __init__(self, api_url: str, poll_interval: float = 0.1):
         self.api_url = api_url.rstrip("/")
         self.poll_interval = poll_interval
 
