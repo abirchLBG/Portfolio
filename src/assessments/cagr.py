@@ -1,13 +1,17 @@
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
 
 from src.assessments.base_assessment import BaseAssessment
+from src.constants import AssessmentName
 
 
 @dataclass(kw_only=True)
 class CAGR(BaseAssessment):
+    name: ClassVar[AssessmentName] = AssessmentName.CAGR
+
     @staticmethod
     def _summary(returns: pd.Series, ann_factor: int = 252, **kwargs) -> float:
         return float(np.prod(returns + 1) ** (ann_factor / len(returns)) - 1)

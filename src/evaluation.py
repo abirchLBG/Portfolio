@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 from typing import Any, Self, Type
+from concurrent.futures import Executor, ProcessPoolExecutor
 
-from frozendict import frozendict
+import pandas as pd
 from pyparsing import Iterable
 
 from src.assessments.base_assessment import BaseAssessment
@@ -15,57 +16,57 @@ from src.assessments.information_ratio import InformationRatio
 from src.assessments.sharpe_ratio import SharpeRatio
 from src.assessments.tracking_error import TrackingError
 from src.assessments.treynor_ratio import TreynorRatio
+from src.constants import AssessmentName
 from src.dataclasses.assessment_config import AssessmentConfig
 
 
 from logging import Logger, getLogger
 
 from src.dataclasses.assessment_results import AssessmentType
+from src.utils.executors import DummyExecutor, RQExecutor
 
 logger: Logger = getLogger(__name__)
 
 
-class AssessmentName(StrEnum):
-    Beta = "Beta"
-    CAGR = "CAGR"
-    MaxDrawdown = "Max Drawdown"
-    TrackingError = "Tracking Error"
+ALL_ASSESSMENTS: dict[AssessmentName, Type[BaseAssessment]] = {
+    AssessmentName.Beta: Beta,
+    AssessmentName.CAGR: CAGR,
+    AssessmentName.MaxDrawdown: MaxDrawdown,
+    AssessmentName.TrackingError: TrackingError,
+    AssessmentName.SharpeRatio: SharpeRatio,
+    AssessmentName.InformationRatio: InformationRatio,
+    AssessmentName.CalmarRatio: CalmarRatio,
+    AssessmentName.TreynorRatio: TreynorRatio,
+    AssessmentName.JensensAlpha: JensensAlpha,
+}
 
-    SharpeRatio = "Sharpe Ratio"
-    SortinoRatio = "Sortino Ratio"
-    InformationRatio = "Information Ratio"
-    CalmarRatio = "Calmar Ratio"
-    TreynorRatio = "Treynor Ratio"
-    JensensAlpha = "Jensen's Alpha"
-
-
-ALL_ASSESSMENTS: frozendict[AssessmentName, Type[BaseAssessment]] = frozendict(
-    {
-        AssessmentName.Beta: Beta,
-        AssessmentName.CAGR: CAGR,
-        AssessmentName.MaxDrawdown: MaxDrawdown,
-        AssessmentName.TrackingError: TrackingError,
-        AssessmentName.SharpeRatio: SharpeRatio,
-        AssessmentName.InformationRatio: InformationRatio,
-        AssessmentName.CalmarRatio: CalmarRatio,
-        AssessmentName.TreynorRatio: TreynorRatio,
-        AssessmentName.JensensAlpha: JensensAlpha,
-    }
-)
 
 ALL_ASSESSMENT_TYPES: frozenset[AssessmentType] = frozenset({v for v in AssessmentType})
+
+
+class ExecutorType(Enum):
+    DEFAULT = DummyExecutor
+    ProcessPool = ProcessPoolExecutor
+    Remote = RQExecutor
+
+    def __call__(self, *args, **kwargs):
+        return self.value(*args, **kwargs)
 
 
 @dataclass
 class Evaluation:
     config: AssessmentConfig
 
-    _assessments: frozendict[AssessmentName, Type[BaseAssessment]] = ALL_ASSESSMENTS
-    _assessment_types: frozenset[AssessmentType] = ALL_ASSESSMENT_TYPES
-
     def __post_init__(self):
-        self._results: dict[AssessmentName, float] | None = None
-        self._timer: dict[AssessmentName, float] = {}
+        self._assessments: dict[AssessmentName, Type[BaseAssessment]] = ALL_ASSESSMENTS
+        self._assessment_types: list[AssessmentType] = list(AssessmentType)
+        self._executor: DummyExecutor | ProcessPoolExecutor | RQExecutor = (
+            ExecutorType.DEFAULT()
+        )
+        self._results: dict[
+            AssessmentName | str, dict[AssessmentType, float | pd.Series]
+        ] = {}
+        self._timer: dict[AssessmentName | str, dict[AssessmentType, float]] = {}
 
     def __repr__(self) -> str:
         return "Evaluation"
@@ -91,14 +92,11 @@ class Evaluation:
         Returns:
             Evaluation: Evaluation object with filtered assessments.
         """
-
         if not assessments:
             return self
 
         logger.info("Running with filtered assessments")
-        self._assessments = frozendict(
-            {name: ALL_ASSESSMENTS[name] for name in assessments}
-        )
+        self._assessments = {name: ALL_ASSESSMENTS[name] for name in assessments}
 
         return self
 
@@ -116,42 +114,61 @@ class Evaluation:
         if not assessment_types:
             return self
 
-        logger.info("Running with filtered assessments")
+        logger.info("Running with filtered assessment types")
 
-        self._assessment_types = frozenset(assessment_types)
+        self._assessment_types = list(assessment_types)
 
         return self
 
-    def display_timer_stats(self) -> None:
-        """Method to display the timer stats of the evaluation.
-
-        Returns:
-            str: Formatted string of timer stats.
+    def timer(self) -> pd.DataFrame:
         """
-        if not len(self._timer):
-            logger.warning("No timer stats to display. Run evaluation first.")
-            return
+        Returns a DataFrame with timing stats.
+        Works regardless of whether assessments ran in parallel.
+        """
+        rows = []
+        for assessment, types in self._timer.items():
+            for assessment_type, elapsed in types.items():
+                rows.append(
+                    {
+                        "Assessment": assessment,
+                        "Type": assessment_type,
+                        "Time (s)": elapsed,
+                    }
+                )
+        df = pd.DataFrame(rows)
 
-        logger.info("Assessment Timing Breakdown:")
-        logger.info("-" * 37)
+        return df
 
-        for name, assessment in self._initialized_assessments.items():
-            time_taken: str = f"{assessment.calc_time:.4f}s"
+    def with_executor(
+        self, executor: DummyExecutor | ProcessPoolExecutor | RQExecutor
+    ) -> Self:
+        logger.info(f"Using {executor.__class__.__name__}")
+        self._executor = executor
 
-            fmt_str = f"{name:{' '}<25}|    {time_taken}"  # 37 chars
-            logger.info(fmt_str)
-
-        logger.info("-" * 37)
+        return self
 
     def run(self) -> Self:
         self._init_assessments()
         self._results = {}
+        self._timer = {}
 
-        print(len(self._initialized_assessments))
+        futures = {}
         for name, assessment in self._initialized_assessments.items():
             for assessment_type in self._assessment_types:
-                assessment.run(assessment_type)
+                if issubclass(type(self._executor), Executor):
+                    future = self._executor.submit(assessment._run, assessment_type)
+                    futures[future] = (name, assessment_type)
+                else:
+                    output = assessment._run(assessment_type)
+                    self._results.setdefault(name, {})[assessment_type] = output[
+                        "result"
+                    ]
+                    self._timer.setdefault(name, {})[assessment_type] = output["time"]
 
-            self._results[name] = assessment.results
+        # Collect results from futures
+        for future, (name, assessment_type) in futures.items():
+            output = future.result()
+            self._results.setdefault(name, {})[assessment_type] = output["result"]
+            self._timer.setdefault(name, {})[assessment_type] = output["time"]
 
         return self

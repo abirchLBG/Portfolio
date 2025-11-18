@@ -1,55 +1,52 @@
 from abc import ABC
 from dataclasses import dataclass
-
+from time import perf_counter
+from typing import ClassVar
 import pandas as pd
 
 from src.dataclasses.assessment_config import AssessmentConfig
-from src.dataclasses.assessment_results import AssessmentResults, AssessmentType
-from src.utils.timer import AssessmentTimer, timed_calc
+from src.dataclasses.assessment_results import AssessmentType
 
 
 @dataclass(kw_only=True)
 class BaseAssessment(ABC):
     config: AssessmentConfig
+    name: ClassVar[str]
 
     def __post_init__(self):
-        self.results: AssessmentResults = AssessmentResults()
-        self.timer = AssessmentTimer(self.__class__.__name__)
-
         self._child_cls = type(self)
 
-    def _repr_wrapper(self) -> str:
-        return f"{self.__class__.__name__}()"
-
-    def __repr__(self) -> str:
-        return self._repr_wrapper()
-
     @staticmethod
-    def _summary():
+    def _summary() -> float:
         raise NotImplementedError()
 
     @staticmethod
-    def _rolling():
+    def _rolling() -> pd.Series:
         raise NotImplementedError()
 
     @staticmethod
-    def _expanding():
+    def _expanding() -> pd.Series:
         raise NotImplementedError()
 
-    @timed_calc
-    def summary(self):
+    def summary(self) -> float:
         return self._child_cls._summary(**self.config.kwargs)
 
-    @timed_calc
-    def rolling(self):
+    def rolling(self) -> pd.Series:
         return self._child_cls._rolling(**self.config.kwargs)
 
-    @timed_calc
-    def expanding(self):
+    def expanding(self) -> pd.Series:
         return self._child_cls._expanding(**self.config.kwargs)
 
-    def all(self) -> dict[str | AssessmentType, float | pd.Series]:
-        return {name: self.run(name) for name in AssessmentType}
+    def _run(
+        self, assessment_type: AssessmentType | str = AssessmentType.Summary
+    ) -> dict:
+        start: float = perf_counter()
+        result = getattr(self, assessment_type)()
+        elapsed: float = perf_counter() - start
 
-    def run(self, name: AssessmentType | str) -> float | pd.Series:
-        return getattr(self, name)()
+        return {
+            "assessment": self.name,
+            "type": assessment_type,
+            "result": result,
+            "time": elapsed,
+        }

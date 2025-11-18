@@ -1,13 +1,17 @@
 from dataclasses import dataclass
+from typing import ClassVar
 
 import pandas as pd
 
 from src.assessments.base_assessment import BaseAssessment
 from src.assessments.beta import Beta
+from src.constants import AssessmentName
 
 
 @dataclass(kw_only=True)
 class JensensAlpha(BaseAssessment):
+    name: ClassVar[AssessmentName] = AssessmentName.JensensAlpha
+
     @staticmethod
     def _summary(
         returns: pd.Series,

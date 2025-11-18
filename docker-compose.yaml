@@ -24,9 +24,8 @@ services:
     mem_limit: 512m
     mem_reservation: 256m
 
-  worker1:
+  worker:
     build: .
-    container_name: worker1
     command: ["uv", "run", "python", "-m", "src.app.worker"]
     depends_on:
       redis:

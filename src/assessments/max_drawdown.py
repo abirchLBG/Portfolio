@@ -1,13 +1,17 @@
 from dataclasses import dataclass
+from typing import ClassVar
 
 import pandas as pd
 import numpy as np
 
 from src.assessments.base_assessment import BaseAssessment
+from src.constants import AssessmentName
 
 
 @dataclass
 class MaxDrawdown(BaseAssessment):
+    name: ClassVar[AssessmentName] = AssessmentName.MaxDrawdown
+
     @staticmethod
     def _summary(returns: pd.Series, **kwargs) -> float:
         cum_returns: np.ndarray = np.cumprod(returns + 1)

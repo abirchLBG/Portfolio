@@ -1,14 +1,18 @@
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
 
 from src.assessments.base_assessment import BaseAssessment
 from src.assessments.tracking_error import TrackingError
+from src.constants import AssessmentName
 
 
 @dataclass(kw_only=True)
 class InformationRatio(BaseAssessment):
+    name: ClassVar[AssessmentName] = AssessmentName.InformationRatio
+
     @staticmethod
     def _summary(
         returns: pd.Series, bmk: pd.Series, ann_factor: int = 252, **kwargs

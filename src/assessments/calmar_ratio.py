@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import ClassVar
 
 import pandas as pd
 
@@ -6,10 +7,13 @@ import pandas as pd
 from src.assessments.base_assessment import BaseAssessment
 from src.assessments.max_drawdown import MaxDrawdown
 from src.assessments.cagr import CAGR
+from src.constants import AssessmentName
 
 
 @dataclass(kw_only=True)
 class CalmarRatio(BaseAssessment):
+    name: ClassVar[AssessmentName] = AssessmentName.CalmarRatio
+
     @staticmethod
     def _summary(returns: pd.Series, ann_factor: int = 252, **kwargs) -> float:
         cagr: float = CAGR._summary(returns=returns, ann_factor=ann_factor)

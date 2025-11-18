@@ -1,9 +1,11 @@
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
 
 from src.assessments.base_assessment import BaseAssessment
+from src.constants import AssessmentName
 
 
 @dataclass(kw_only=True)
@@ -16,6 +18,8 @@ class Beta(BaseAssessment):
     Description:
         Beta is a measure of a portfolio's sensitivity to market movements.
     """
+
+    name: ClassVar[AssessmentName] = AssessmentName.Beta
 
     @staticmethod
     def _summary(returns: pd.Series, bmk: pd.Series, **kwargs) -> float:

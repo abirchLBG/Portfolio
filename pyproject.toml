@@ -19,3 +19,6 @@ dependencies = [
     "yahooquery>=2.4.1",
     "yfinance>=0.2.66",
 ]
+
+[tool.ruff]
+exclude = ["*.ipynb"]
