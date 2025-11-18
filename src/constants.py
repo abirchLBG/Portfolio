@@ -13,7 +13,7 @@ class AssessmentName(StrEnum):
     TrackingError = "Tracking Error"
     Volatility = "Volatility"
     Correlation = "Correlation"
-    ValueAtRisk = "Value at Risk"
+    ValueAtRisk = "VaR"
     CVaR = "CVaR"
     UpCapture = "Up Capture"
     DownCapture = "Down Capture"

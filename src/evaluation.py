@@ -28,7 +28,7 @@ from src.dataclasses.assessment_config import AssessmentConfig
 
 from logging import Logger, getLogger
 
-from src.dataclasses.assessment_results import AssessmentType
+from src.dataclasses.assessment_results import AssessmentType, EvaluationResults
 from src.utils.executors import DummyExecutor, RQExecutor
 
 logger: Logger = getLogger(__name__)
@@ -75,10 +75,6 @@ class Evaluation:
         self._executor: DummyExecutor | ProcessPoolExecutor | RQExecutor = (
             ExecutorType.DEFAULT()
         )
-        self._results: dict[
-            AssessmentName | str, dict[AssessmentType, float | pd.Series]
-        ] = {}
-        self._timer: dict[AssessmentName | str, dict[AssessmentType, float]] = {}
 
     def __repr__(self) -> str:
         return "Evaluation"
@@ -132,25 +128,6 @@ class Evaluation:
 
         return self
 
-    def timer(self) -> pd.DataFrame:
-        """
-        Returns a DataFrame with timing stats.
-        Works regardless of whether assessments ran in parallel.
-        """
-        rows = []
-        for assessment, types in self._timer.items():
-            for assessment_type, elapsed in types.items():
-                rows.append(
-                    {
-                        "Assessment": assessment,
-                        "Type": assessment_type,
-                        "Time (s)": elapsed,
-                    }
-                )
-        df = pd.DataFrame(rows)
-
-        return df
-
     def with_executor(
         self, executor: DummyExecutor | ProcessPoolExecutor | RQExecutor
     ) -> Self:
@@ -159,10 +136,18 @@ class Evaluation:
 
         return self
 
-    def run(self) -> Self:
+    def run(self) -> EvaluationResults:
+        """
+        Run all configured assessments and return results.
+
+        Returns:
+            EvaluationResults: Object containing all assessment results and timing data
+        """
         self._init_assessments()
-        self._results = {}
-        self._timer = {}
+        results: dict[
+            AssessmentName | str, dict[AssessmentType, float | pd.Series]
+        ] = {}
+        timer: dict[AssessmentName | str, dict[AssessmentType, float]] = {}
 
         futures = {}
         for name, assessment in self._initialized_assessments.items():
@@ -172,15 +157,13 @@ class Evaluation:
                     futures[future] = (name, assessment_type)
                 else:
                     output = assessment._run(assessment_type)
-                    self._results.setdefault(name, {})[assessment_type] = output[
-                        "result"
-                    ]
-                    self._timer.setdefault(name, {})[assessment_type] = output["time"]
+                    results.setdefault(name, {})[assessment_type] = output["result"]
+                    timer.setdefault(name, {})[assessment_type] = output["time"]
 
         # Collect results from futures
         for future, (name, assessment_type) in futures.items():
             output = future.result()
-            self._results.setdefault(name, {})[assessment_type] = output["result"]
-            self._timer.setdefault(name, {})[assessment_type] = output["time"]
+            results.setdefault(name, {})[assessment_type] = output["result"]
+            timer.setdefault(name, {})[assessment_type] = output["time"]
 
-        return self
+        return EvaluationResults(results=results, timer=timer)
