@@ -1,6 +1,6 @@
 .PHONY: lint format check
 
-lint: format check
+lint: format check lint_test
 ruff: ruff_format_check
 
 format:
@@ -16,9 +16,18 @@ ruff_format_check:
 	@uvx ruff format
 	@uvx ruff check --fix
 
+lint_test:
+	@echo "Running tests"
+	@uv run pytest -qq .
+
 test:
 	@echo "Running tests"
-	@uv run pytest -n=auto .
+# 	@uv run pytest -n=auto .
+	@uv run pytest .
+
+cov:
+	@echo "Checking test coverage"
+	@uv run pytest --cov=.
 
 build:
 	@echo "Building"
